@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ template.title }}</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Crimson+Pro:ital,wght@0,300;1,300&family=Inter:wght@300;400&family=Great+Vibes&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700&family=Sacramento&family=Pacifico&family=Lobster&family=Cormorant+Garamond:ital,wght@0,300;1,300&family=EB+Garamond:ital,wght@0,400;1,400&family=Lora:ital,wght@0,400;1,400&family=Nunito:wght@300;400&family=Raleway:wght@300;400&family=Caveat&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  min-height:100vh;
+  font-family:'Crimson Pro',Georgia,serif;
+  overflow-x:hidden;
+  {% if config %}
+    {% if config.bg_type == 'gradient' %}background:{{ config.bg_value|default:"linear-gradient(135deg,#1a0a14,#2d0a1e)" }};
+    {% elif config.bg_type == 'image' and config.bg_value %}background:url('{{ config.bg_value }}') center/cover fixed;
+    {% else %}background:{{ config.bg_value|default:"#09080f" }};
+    {% endif %}
+  {% else %}background:linear-gradient(135deg,#1a0a14,#2d0a1e);
+  {% endif %}
+}
+{% if config and config.bg_overlay and config.bg_overlay > 0 %}
+body::before{content:'';position:fixed;inset:0;background:rgba(0,0,0,{{ config.bg_overlay }});z-index:1;pointer-events:none;}
+{% endif %}
+canvas#cv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;}
+.page{position:relative;z-index:3;max-width:600px;margin:0 auto;padding:56px 20px 70px;text-align:center;}
+.orn{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px;opacity:0;animation:fadein 1.5s forwards .3s;}
+.orn-line{width:40px;height:0.5px;background:rgba(255,150,170,0.35);}
+.hb{animation:hbeat 2s ease-in-out infinite;}
+@keyframes hbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+
+.title{
+  font-family:'{% if config and config.title_font %}{{ config.title_font }}{% else %}Playfair Display{% endif %}',serif;
+  font-size:{% if config and config.title_size %}{{ config.title_size }}px{% else %}clamp(26px,6vw,48px){% endif %};
+  font-style:italic; font-weight:400;
+  color:{% if config and config.title_color %}{{ config.title_color }}{% else %}#fff5f7{% endif %};
+  line-height:1.2; margin-bottom:10px;
+  text-shadow:0 0 40px rgba(255,100,140,.35);
+  {% if config and config.title_font_effect == 'shadow' %}
+    text-shadow:0 2px 20px rgba(255,100,150,.7),0 0 40px rgba(255,50,100,.4);
+  {% elif config and config.title_font_effect == 'outline' %}
+    -webkit-text-stroke:1.5px rgba(255,140,170,.85);color:transparent;
+  {% elif config and config.title_font_effect == 'gradient-pink' %}
+    background:linear-gradient(135deg,#ff69b4,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  {% elif config and config.title_font_effect == 'gradient-gold' %}
+    background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  {% endif %}
+  opacity:0;
+  {% if config and config.title_effect == 'glow' %}
+    animation:risein 1.5s forwards .7s, gp 3s ease-in-out infinite 2s;
+  {% elif config and config.title_effect == 'float' %}
+    animation:risein 1.5s forwards .7s, fl 3s ease-in-out infinite 2s;
+  {% elif config and config.title_effect == 'typewriter' %}
+    overflow:hidden;white-space:nowrap;border-right:2px solid rgba(255,150,170,.7);
+    width:0;animation:tw 2s steps(30,end) forwards .5s, blink .7s step-end infinite 2.5s;
+  {% elif config and config.title_effect == 'pulse' %}
+    animation:risein 1.5s forwards .7s, pl 2s ease-in-out infinite 2s;
+  {% elif config and config.title_effect == 'neon' %}
+    animation:risein 1.5s forwards .7s, np 2s ease-in-out infinite 2s;
+  {% elif config and config.title_effect == 'shake' %}
+    animation:risein 1.5s forwards .7s, sk 0.4s ease-in-out infinite 3s;
+  {% else %}
+    animation:risein 1.5s forwards .7s;
+  {% endif %}
+}
+@keyframes gp{0%,100%{text-shadow:0 0 40px rgba(255,100,140,.35)}50%{text-shadow:0 0 80px rgba(255,100,140,.8)}}
+@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes tw{to{width:100%}}
+@keyframes blink{0%,100%{border-color:transparent}50%{border-color:rgba(255,150,170,.7)}}
+@keyframes pl{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+@keyframes np{0%,100%{text-shadow:0 0 8px #ff69b4,0 0 20px #ff69b4,0 0 40px #ff1493}50%{text-shadow:0 0 18px #ff69b4,0 0 45px #ff1493,0 0 80px #c2185b}}
+@keyframes sk{0%,100%{transform:rotate(0)}25%{transform:rotate(-1.5deg)}75%{transform:rotate(1.5deg)}}
+
+.divl{width:50px;height:0.5px;background:rgba(255,150,170,0.5);margin:22px auto;opacity:0;animation:fadein 1.5s forwards 1s;}
+.msg{
+  font-size:{% if config and config.message_size %}{{ config.message_size }}px{% else %}clamp(15px,3.2vw,19px){% endif %};
+  font-weight:300; font-style:italic;
+  color:{% if config and config.message_color %}{{ config.message_color }}{% else %}rgba(255,235,240,0.88){% endif %};
+  font-family:{% if config and config.message_font %}'{{ config.message_font }}'{% else %}'Crimson Pro'{% endif %},Georgia,serif;
+  line-height:1.95; max-width:520px; margin:0 auto;
+  opacity:0; animation:risein 1.5s forwards 1.4s;
+  white-space:pre-line;
+}
+.merchant-tag{
+  margin-top:44px;
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.04);
+  border:0.5px solid rgba(255,140,170,0.18);
+  border-radius:50px;padding:8px 20px;
+  opacity:0;animation:fadein 1.5s forwards 2s;
+}
+.merchant-logo{width:24px;height:24px;border-radius:50%;object-fit:cover;}
+.merchant-name{font-size:12px;letter-spacing:1px;color:rgba(255,180,200,0.55);}
+
+/* Music player */
+.music-player{
+  margin-top:28px;
+  display:inline-flex;align-items:center;gap:14px;
+  background:rgba(255,255,255,0.04);
+  border:0.5px solid rgba(255,140,170,0.18);
+  border-radius:50px;padding:10px 24px;
+  opacity:0;animation:fadein 1.5s forwards 2.4s;
+}
+.play-btn{
+  width:38px;height:38px;border-radius:50%;
+  background:rgba(255,100,150,0.18);
+  border:0.5px solid rgba(255,120,160,0.4);
+  cursor:pointer;color:#ffb3c6;font-size:14px;
+  display:flex;align-items:center;justify-content:center;
+  transition:background .2s,transform .15s;
+  flex-shrink:0;
+}
+.play-btn:hover{background:rgba(255,100,150,.3);transform:scale(1.08);}
+.waves{display:flex;align-items:center;gap:3px;}
+.wb{width:3px;border-radius:2px;background:rgba(255,140,170,.65);}
+@keyframes wave{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+
+@keyframes fadein{to{opacity:1}}
+@keyframes risein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div class="page">
+  <div class="orn">
+    <div class="orn-line"></div>
+    <svg class="hb" width="20" height="20" viewBox="0 0 24 24" fill="none">
+      <path d="M12 21C12 21 3 14 3 8C3 5.5 5 3 7.5 3C9.2 3 10.7 4 12 5.5C13.3 4 14.8 3 16.5 3C19 3 21 5.5 21 8C21 14 12 21 12 21Z"
+        fill="rgba(220,60,100,0.85)" stroke="rgba(255,140,170,0.4)" stroke-width="0.5"/>
+    </svg>
+    <div class="orn-line"></div>
+  </div>
+
+  {% if config and config.title_text %}
+  <div class="title">{{ config.title_text }}</div>
+  {% else %}
+  <div class="title">{{ template.title }}</div>
+  {% endif %}
+
+  {% if config and config.message_text %}
+  <div class="divl"></div>
+  <div class="msg">{{ config.message_text }}</div>
+  {% endif %}
+
+  <!-- Merchant badge -->
+  <div class="merchant-tag">
+    {% if merchant.shop_logo %}
+    <img class="merchant-logo" src="{{ merchant.shop_logo.url }}" alt="{{ merchant.shop_name }}">
+    {% endif %}
+    <span class="merchant-name">{{ merchant.shop_name }}</span>
+  </div>
+
+  {% if config and config.audio_file %}
+    {% if not config.audio_hidden %}
+    <!-- Music player -->
+    <div class="music-player">
+      <button class="play-btn" id="playBtn" onclick="toggleAudio()">▶</button>
+      <div class="waves">
+        <div class="wb" id="w1" style="height:6px;"></div>
+        <div class="wb" id="w2" style="height:14px;"></div>
+        <div class="wb" id="w3" style="height:20px;"></div>
+        <div class="wb" id="w4" style="height:12px;"></div>
+        <div class="wb" id="w5" style="height:8px;"></div>
+      </div>
+    </div>
+    {% endif %}
+  <audio id="bgAudio" src="{{ config.audio_file.url }}" loop {% if config.audio_autoplay %}autoplay{% endif %}></audio>
+  {% endif %}
+</div>
+
+<script>
+// ── BEZAKLAR ──
+const cv=document.getElementById('cv'),cx=cv.getContext('2d');
+function rs(){cv.width=window.innerWidth;cv.height=window.innerHeight;}
+rs();window.addEventListener('resize',rs);
+
+const RAW_DECS = {{ decorations_json|safe }};
+// Eski string formatini ham qo'llab-quvvatlash
+const DECS = RAW_DECS.map(d=>typeof d==='string'?{key:d,count:22,speed:1.0,opacity:0.65}:d);
+
+const CONF_COL=['rgba(255,80,120,.9)','rgba(80,180,255,.9)','rgba(255,220,80,.9)','rgba(100,220,100,.9)','rgba(220,100,255,.9)'];
+const EM={hearts:'♥',stars:'✦',fireworks:'✦',strawberry:'🍓',
+  balloons:'●',roses:'🌹',butterflies:'🦋',leaves:'🍃',
+  diamonds:'💎',music:'♪',kisses:'💋',rings:'💍'};
+const CL={hearts:'rgba(220,60,100,.9)',stars:'rgba(255,220,80,.9)',
+  fireworks:'rgba(255,180,50,.95)',balloons:'rgba(255,100,150,.85)',
+  roses:'rgba(220,50,80,.85)',butterflies:'rgba(180,80,220,.85)',
+  leaves:'rgba(60,180,80,.85)',diamonds:'rgba(150,220,255,.9)',
+  music:'rgba(255,150,200,.85)',kisses:'rgba(220,60,100,.9)',rings:'rgba(255,215,0,.9)'};
+
+let ptls=[];
+function mkP(type,sp,op){
+  return{x:Math.random()*window.innerWidth,y:-25,r:Math.random()*9+4,
+    vx:(Math.random()-.5)*.9,vy:(Math.random()*1.3+.5)*(sp||1),
+    rot:Math.random()*Math.PI*2,rs:(Math.random()-.5)*.04,
+    o:Math.random()*(op||.65)*.7+(op||.65)*.3,type};}
+DECS.forEach(d=>{
+  for(let i=0;i<(d.count||22);i++) ptls.push(mkP(d.key,d.speed,d.opacity));
+});
+
+function drawP(p){
+  cx.save();cx.translate(p.x,p.y);cx.rotate(p.rot);cx.globalAlpha=p.o;
+  if(p.type==='snow'){
+    cx.beginPath();cx.arc(0,0,p.r*.6,0,Math.PI*2);cx.fillStyle='rgba(200,220,255,.85)';cx.fill();
+  } else if(p.type==='bubbles'){
+    cx.beginPath();cx.arc(0,0,p.r,0,Math.PI*2);cx.strokeStyle='rgba(150,200,255,.5)';cx.lineWidth=1;cx.stroke();
+  } else if(p.type==='petals'){
+    cx.beginPath();cx.ellipse(0,0,p.r,p.r*.55,0,0,Math.PI*2);cx.fillStyle='rgba(255,140,170,.75)';cx.fill();
+  } else if(p.type==='confetti'){
+    cx.fillStyle=CONF_COL[Math.floor(Math.abs(p.x+p.y*3))%5];cx.fillRect(-p.r*.6,-p.r*.4,p.r*1.2,p.r*.8);
+  } else {
+    const em=EM[p.type];
+    if(em){cx.font=(p.r*2.2)+'px serif';cx.fillStyle=CL[p.type]||'rgba(255,140,170,.8)';cx.textAlign='center';cx.fillText(em,0,0);}
+  }
+  cx.restore();
+}
+
+function anim(){
+  cx.clearRect(0,0,cv.width,cv.height);
+  ptls.forEach((p,i)=>{
+    p.x+=p.vx+Math.sin(Date.now()*.001+i)*.3;p.y+=p.vy;p.rot+=p.rs;
+    if(p.y>cv.height+25){p.y=-25;p.x=Math.random()*cv.width;}
+    drawP(p);
+  });
+  requestAnimationFrame(anim);
+}
+if(DECS.length) anim();
+
+// ── AUDIO ──
+let playing=false;
+const waveDurations=[1.2,1.0,0.9,1.1,1.3];
+
+function setWaveAnim(state){
+  ['w1','w2','w3','w4','w5'].forEach((id,i)=>{
+    const el=document.getElementById(id);
+    if(!el)return;
+    if(state){
+      el.style.animation=`wave ${waveDurations[i]}s ease-in-out infinite ${i*0.12}s`;
+    } else {
+      el.style.animation='none';
+      el.style.transform='scaleY(0.35)';
+    }
+  });
+}
+
+function toggleAudio(){
+  const audio=document.getElementById('bgAudio');
+  const btn=document.getElementById('playBtn');
+  if(!audio)return;
+  if(playing){
+    audio.pause();playing=false;
+    if(btn)btn.innerHTML='▶';
+    setWaveAnim(false);
+  } else {
+    audio.play().then(()=>{
+      playing=true;
+      if(btn)btn.innerHTML='⏸';
+      setWaveAnim(true);
+    }).catch(e=>console.log('Audio error:',e));
+  }
+}
+
+window.addEventListener('load',()=>{
+  const audio=document.getElementById('bgAudio');
+  {% if config and config.audio_autoplay %}
+  if(audio){
+    audio.play().then(()=>{
+      playing=true;
+      const btn=document.getElementById('playBtn');
+      if(btn)btn.innerHTML='⏸';
+      setWaveAnim(true);
+    }).catch(()=>{
+      // Autoplay bloklangan — foydalanuvchi bosganda ishlaydi
+    });
+  }
+  {% endif %}
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+{% extends "base/layout.html" %}
+{% block title %}Shablonlar{% endblock %}
+{% block nav_templates %}active{% endblock %}
+{% block content %}
+<div class="page-title">
+  Shablonlar
+  <a href="/dashboard/templates/new/" class="btn btn-primary btn-sm" style="vertical-align:middle;margin-left:12px;">+ Yangi shablon</a>
+</div>
+
+<div class="card" style="padding:16px;margin-bottom:16px;">
+  <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+    <select id="catFilter" onchange="loadTemplates()" style="width:auto;padding:8px 12px;">
+      <option value="">Barcha kategoriyalar</option>
+    </select>
+    <select id="statusFilter" onchange="loadTemplates()" style="width:auto;padding:8px 12px;">
+      <option value="">Barcha holat</option>
+      <option value="published">Nashr etilgan</option>
+      <option value="draft">Qoralama</option>
+    </select>
+  </div>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr><th>NOMI</th><th>KATEGORIYA</th><th>HOLAT</th><th>KO'RISHLAR</th><th>YARATILGAN</th><th>AMALLAR</th></tr></thead>
+    <tbody id="tBody"><tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted);">Yuklanmoqda...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function loadCategories(){
+  const cats = await fetch('/api/categories/').then(r=>r.json());
+  const sel  = document.getElementById('catFilter');
+  cats.forEach(c=>{ const o=document.createElement('option'); o.value=c.slug; o.textContent=c.icon+' '+c.name; sel.appendChild(o); });
+}
+
+async function loadTemplates(){
+  const cat    = document.getElementById('catFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  let url      = '/api/templates/?';
+  if(cat)    url += 'category='+cat+'&';
+  if(status) url += 'status='+status;
+
+  const data = await fetch(url).then(r=>r.json());
+  const tbody = document.getElementById('tBody');
+  if(!data.length){ tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted);">Shablon topilmadi</td></tr>'; return; }
+  tbody.innerHTML = data.map(t=>`
+    <tr>
+      <td><strong>${t.title}</strong></td>
+      <td>${t.category_name||'—'}</td>
+      <td><span class="badge ${t.status==='published'?'badge-green':'badge-gray'}">${t.status==='published'?'Nashr':'Qoralama'}</span></td>
+      <td>${t.view_count||0}</td>
+      <td style="color:var(--muted);font-size:13px;">${t.created_at?.slice(0,10)||''}</td>
+      <td style="display:flex;gap:6px;">
+        <a href="/dashboard/templates/${t.id}/builder/" class="btn btn-outline btn-sm">Tahrirlash</a>
+        <a href="/dashboard/qrcodes/${t.id}/" class="btn btn-outline btn-sm">QR</a>
+        <button onclick="deleteTemplate(${t.id})" class="btn btn-danger btn-sm">O'chirish</button>
+      </td>
+    </tr>`).join('');
+}
+
+async function deleteTemplate(id){
+  if(!confirm('Haqiqatan o\'chirasizmi?')) return;
+  await fetch('/api/templates/'+id+'/',{method:'DELETE',headers:{'X-CSRFToken':getCookie('csrftoken')}});
+  loadTemplates();
+}
+function getCookie(n){let v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+
+loadCategories(); loadTemplates();
+</script>
+{% endblock %}

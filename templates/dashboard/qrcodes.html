@@ -1,0 +1,58 @@
+{% extends "base/layout.html" %}
+{% block title %}QR Kodlar{% endblock %}
+{% block nav_qr %}active{% endblock %}
+{% block content %}
+<div class="page-title">QR Kodlar</div>
+<div id="qrContent"><p style="color:var(--muted);">Yuklanmoqda...</p></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const TID = "{{ template_id }}";
+
+async function load(){
+  const url = TID ? '/api/qr/template/'+TID+'/' : null;
+  if(!url){
+    // List all templates with QR
+    const templates = await fetch('/api/templates/').then(r=>r.json());
+    const published  = templates.filter(t=>t.qr_slug);
+    if(!published.length){ document.getElementById('qrContent').innerHTML='<p style="color:var(--muted);">Hali QR kodlar yo\'q. Avval shablon yarating.</p>'; return; }
+    document.getElementById('qrContent').innerHTML = published.map(t=>`
+      <div class="card" style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+        <div style="flex:1;min-width:200px;">
+          <div style="font-size:16px;font-weight:500;margin-bottom:4px;">${t.title}</div>
+          <div style="font-size:13px;color:var(--muted);">Slug: <code style="background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:4px;">${t.qr_slug}</code></div>
+          <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="/dashboard/qrcodes/${t.id}/" class="btn btn-outline btn-sm">Batafsil</a>
+            <a href="/api/qr/download/${t.qr_slug}/" class="btn btn-primary btn-sm">⬇ QR Yuklab olish</a>
+            <a href="/i/${t.qr_slug}/" target="_blank" class="btn btn-outline btn-sm">👁 Ko'rish</a>
+          </div>
+        </div>
+      </div>`).join('');
+    return;
+  }
+  const data = await fetch(url).then(r=>r.json());
+  document.getElementById('qrContent').innerHTML = `
+    <div class="card" style="max-width:560px;">
+      <div style="display:flex;gap:24px;align-items:flex-start;flex-wrap:wrap;">
+        ${data.qr_image ? '<img src="'+data.qr_image+'" style="width:160px;height:160px;border-radius:12px;border:0.5px solid var(--border);">' : ''}
+        <div style="flex:1;">
+          <div style="margin-bottom:12px;">
+            <div style="font-size:12px;color:var(--muted);margin-bottom:4px;">PUBLIC URL</div>
+            <code style="font-size:13px;background:rgba(255,255,255,0.06);padding:6px 10px;border-radius:6px;display:block;word-break:break-all;">${data.public_url}</code>
+          </div>
+          <div class="stat-grid" style="margin-bottom:16px;">
+            <div class="stat-card"><div class="num">${data.total_scans}</div><div class="lbl">Jami skanlar</div></div>
+            <div class="stat-card"><div class="num">${Object.values(data.device_stats||{}).reduce((a,b)=>a+b,0)||0}</div><div class="lbl">Qurilmalar</div></div>
+          </div>
+          ${data.device_stats ? '<div style="font-size:13px;color:var(--muted);margin-bottom:12px;">'+Object.entries(data.device_stats).map(([k,v])=>'<span style="margin-right:12px;">'+k+': <strong style="color:var(--text);">'+v+'</strong></span>').join('')+'</div>' : ''}
+          <div style="display:flex;gap:8px;flex-wrap:wrap;">
+            <a href="/api/qr/download/${data.slug}/" class="btn btn-primary">⬇ QR Yuklab olish</a>
+            <a href="/i/${data.slug}/" target="_blank" class="btn btn-outline">👁 Sahifani Ko'rish</a>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+load();
+</script>
+{% endblock %}

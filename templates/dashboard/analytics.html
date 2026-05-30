@@ -1,0 +1,43 @@
+{% extends "base/layout.html" %}
+{% block title %}Analytics{% endblock %}
+{% block nav_analytics %}active{% endblock %}
+{% block content %}
+<div class="page-title">Analytics</div>
+<div class="stat-grid" id="statsGrid"><p style="color:var(--muted);">Yuklanmoqda...</p></div>
+<div class="card" id="templateStats"></div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function load(){
+  const [a, templates] = await Promise.all([
+    fetch('/api/qr/analytics/').then(r=>r.json()),
+    fetch('/api/templates/').then(r=>r.json()),
+  ]);
+  document.getElementById('statsGrid').innerHTML = `
+    <div class="stat-card"><div class="num">${a.total_templates}</div><div class="lbl">Jami shablonlar</div></div>
+    <div class="stat-card"><div class="num">${a.published}</div><div class="lbl">Nashr etilgan</div></div>
+    <div class="stat-card"><div class="num">${a.total_scans}</div><div class="lbl">Jami skanlar</div></div>
+    <div class="stat-card"><div class="num">${a.total_views}</div><div class="lbl">Ko'rishlar</div></div>
+    <div class="stat-card"><div class="num">${a.qr_limit}</div><div class="lbl">QR limit</div></div>
+    <div class="stat-card"><div class="num" style="font-size:18px;">${(a.plan||'free').toUpperCase()}</div><div class="lbl">Tarif</div></div>`;
+
+  if(templates.length){
+    document.getElementById('templateStats').innerHTML = `
+      <div style="font-size:15px;font-weight:500;margin-bottom:16px;">Shablon statistikasi</div>
+      <table>
+        <thead><tr><th>NOMI</th><th>KATEGORIYA</th><th>HOLAT</th><th>KO'RISHLAR</th><th>QR SLUG</th></tr></thead>
+        <tbody>${templates.map(t=>`
+          <tr>
+            <td>${t.title}</td>
+            <td>${t.category_name||'—'}</td>
+            <td><span class="badge ${t.status==='published'?'badge-green':'badge-gray'}">${t.status==='published'?'Nashr':'Qoralama'}</span></td>
+            <td>${t.view_count||0}</td>
+            <td><code style="font-size:12px;background:rgba(255,255,255,0.06);padding:2px 8px;border-radius:4px;">${t.qr_slug||'—'}</code></td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+}
+load();
+</script>
+{% endblock %}

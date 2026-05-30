@@ -1,0 +1,50 @@
+{% extends "base/layout.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block nav_home %}active{% endblock %}
+{% block content %}
+<div class="page-title">Dashboard</div>
+
+<div class="stat-grid" id="stats">
+  <div class="stat-card"><div class="num" id="s-templates">—</div><div class="lbl">Jami shablonlar</div></div>
+  <div class="stat-card"><div class="num" id="s-published">—</div><div class="lbl">Nashr etilgan</div></div>
+  <div class="stat-card"><div class="num" id="s-scans">—</div><div class="lbl">Jami skanlar</div></div>
+  <div class="stat-card"><div class="num" id="s-plan">—</div><div class="lbl">Tarif rejasi</div></div>
+</div>
+
+<div class="card">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+    <div style="font-size:15px;font-weight:500;">So'nggi shablonlar</div>
+    <a href="/dashboard/templates/new/" class="btn btn-primary btn-sm">+ Yangi shablon</a>
+  </div>
+  <table>
+    <thead><tr><th>NOMI</th><th>KATEGORIYA</th><th>HOLAT</th><th>SKANLAR</th><th></th></tr></thead>
+    <tbody id="recent-templates"><tr><td colspan="5" style="color:var(--muted);text-align:center;padding:24px;">Yuklanmoqda...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function load(){
+  const [analytics, templates] = await Promise.all([
+    fetch('/api/qr/analytics/').then(r=>r.json()),
+    fetch('/api/templates/?').then(r=>r.json())
+  ]);
+  document.getElementById('s-templates').textContent = analytics.total_templates||0;
+  document.getElementById('s-published').textContent  = analytics.published||0;
+  document.getElementById('s-scans').textContent      = analytics.total_scans||0;
+  document.getElementById('s-plan').textContent       = (analytics.plan||'free').toUpperCase();
+
+  const tbody = document.getElementById('recent-templates');
+  if(!templates.length){ tbody.innerHTML='<tr><td colspan="5" style="color:var(--muted);text-align:center;padding:24px;">Hali shablon yo\'q</td></tr>'; return; }
+  tbody.innerHTML = templates.slice(0,8).map(t=>`
+    <tr>
+      <td>${t.title}</td>
+      <td>${t.category_name||'—'}</td>
+      <td><span class="badge ${t.status==='published'?'badge-green':'badge-gray'}">${t.status==='published'?'Nashr':'Qoralama'}</span></td>
+      <td>${t.view_count||0}</td>
+      <td><a href="/dashboard/templates/${t.id}/builder/" class="btn btn-outline btn-sm">Tahrirlash</a></td>
+    </tr>`).join('');
+}
+load();
+</script>
+{% endblock %}

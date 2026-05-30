@@ -1,0 +1,771 @@
+{% extends "base/layout.html" %}
+{% block title %}Template Builder{% endblock %}
+{% block nav_templates %}active{% endblock %}
+{% block extra_css %}
+<style>
+.builder-wrap{display:grid;grid-template-columns:320px 1fr;gap:0;height:calc(100vh - 64px);margin:-32px;overflow:hidden;}
+.panel{overflow-y:auto;background:rgba(255,255,255,0.02);border-right:0.5px solid var(--border);}
+.preview-wrap{position:relative;background:#09080f;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.preview-frame{width:375px;height:668px;border:none;border-radius:24px;box-shadow:0 0 80px rgba(194,24,91,0.25);}
+.preview-label{position:absolute;top:12px;right:12px;font-size:11px;letter-spacing:1px;color:rgba(240,224,232,0.3);}
+.save-bar{position:fixed;bottom:0;left:220px;right:0;background:rgba(26,10,20,0.96);border-top:0.5px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:12px;z-index:50;backdrop-filter:blur(8px);}
+.tab-row{display:flex;border-bottom:0.5px solid var(--border);position:sticky;top:0;background:rgba(26,10,20,0.98);z-index:10;}
+.tab{padding:12px 14px;font-size:13px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;white-space:nowrap;}
+.tab.active{color:var(--pink-l);border-bottom-color:var(--pink);}
+.tab-content{display:none;padding:16px;}
+.tab-content.active{display:block;}
+.color-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px;}
+.swatch{width:28px;height:28px;border-radius:6px;cursor:pointer;border:2px solid transparent;transition:border 0.15s;flex-shrink:0;}
+.swatch:hover,.swatch.sel{border-color:#fff;}
+.dec-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.dec-card{background:rgba(255,255,255,0.04);border:0.5px solid var(--border);border-radius:8px;padding:10px;cursor:pointer;text-align:center;font-size:12px;transition:background 0.2s;user-select:none;}
+.dec-card:hover,.dec-card.active{background:rgba(194,24,91,0.2);border-color:rgba(194,24,91,0.6);}
+.dec-card .icon{font-size:22px;margin-bottom:4px;}
+.fx-btn{display:inline-block;padding:6px 11px;border-radius:6px;font-size:12px;border:0.5px solid var(--border);cursor:pointer;margin:3px;transition:all 0.15s;background:transparent;color:var(--muted);}
+.fx-btn:hover,.fx-btn.active{background:rgba(194,24,91,0.15);border-color:var(--pink);color:var(--pink-l);}
+.audio-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px;border:0.5px solid var(--border);margin-bottom:6px;cursor:pointer;transition:background 0.15s;}
+.audio-item:hover,.audio-item.selected{background:rgba(194,24,91,0.12);border-color:rgba(194,24,91,0.4);}
+.audio-item .aname{font-size:13px;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.audio-item .aplay{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,0.08);border:0.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;}
+.sect-label{font-size:11px;letter-spacing:2px;color:var(--muted);margin-bottom:12px;font-weight:500;}
+</style>
+{% endblock %}
+{% block content %}
+<div class="builder-wrap">
+
+  <!-- SOL PANEL -->
+  <div class="panel">
+    <div class="tab-row">
+      <div class="tab active" onclick="switchTab('bg')">🎨 Fon</div>
+      <div class="tab" onclick="switchTab('text')">✏️ Matn</div>
+      <div class="tab" onclick="switchTab('dec')">✨ Bezak</div>
+      <div class="tab" onclick="switchTab('audio')">🎵 Audio</div>
+    </div>
+
+    <!-- FON TAB -->
+    <div class="tab-content active" id="tab-bg">
+      <div class="form-group">
+        <div class="sect-label">FON TURI</div>
+        <select id="bg_type" onchange="onBgTypeChange()">
+          <option value="color">Rang</option>
+          <option value="gradient">Gradient</option>
+          <option value="image">Rasm (URL)</option>
+        </select>
+      </div>
+
+      <div id="sec-color">
+        <div class="sect-label">RANG TANLANG</div>
+        <div class="color-row" id="bgSwatches"></div>
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;">
+          <input type="color" id="bg_picker" value="#09080f" oninput="cfg.bg_value=this.value;updatePreview()" style="width:36px;height:32px;padding:2px;border-radius:6px;border:0.5px solid var(--border);background:transparent;cursor:pointer;">
+          <span style="font-size:12px;color:var(--muted);">Maxsus rang</span>
+        </div>
+      </div>
+
+      <div id="sec-gradient" style="display:none;">
+        <div class="sect-label">GRADIENT TANLANG</div>
+        <div class="color-row" id="gradSwatches"></div>
+      </div>
+
+      <div id="sec-image" style="display:none;">
+        <div class="sect-label">RASM URL</div>
+        <input type="text" id="bg_img_url" placeholder="https://example.com/img.jpg" oninput="cfg.bg_value=this.value;updatePreview()">
+      </div>
+
+      <div style="margin-top:16px;">
+        <div class="sect-label">QORONGLIK OVERLAY</div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <input type="range" min="0" max="85" value="0" id="bg_overlay" oninput="cfg.bg_overlay=this.value/100;updatePreview();document.getElementById('ov_val').textContent=this.value+'%'" style="flex:1;">
+          <span id="ov_val" style="font-size:12px;color:var(--muted);min-width:32px;">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MATN TAB -->
+    <div class="tab-content" id="tab-text">
+
+      <!-- SARLAVHA -->
+      <div class="form-group">
+        <div class="sect-label">SARLAVHA</div>
+        <input type="text" id="title_text" placeholder="Sarlavha yozing..." oninput="updatePreview()">
+      </div>
+      <div class="form-group">
+        <div class="sect-label">SARLAVHA SHRIFTI</div>
+        <select id="title_font" onchange="cfg.title_font=this.value;updatePreview()" style="font-size:13px;">
+          <option value="Playfair Display">Playfair Display</option>
+          <option value="Great Vibes">Great Vibes</option>
+          <option value="Dancing Script">Dancing Script</option>
+          <option value="Cinzel">Cinzel</option>
+          <option value="Sacramento">Sacramento</option>
+          <option value="Pacifico">Pacifico</option>
+          <option value="Lobster">Lobster</option>
+          <option value="Cormorant Garamond">Cormorant Garamond</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+          <div class="sect-label" style="margin-bottom:0;">SARLAVHA O'LCHAMI</div>
+          <span id="titleSizeVal" style="font-size:12px;color:var(--muted);">42px</span>
+        </div>
+        <input type="range" min="18" max="72" value="42" id="title_size"
+          oninput="cfg.title_size=parseInt(this.value);document.getElementById('titleSizeVal').textContent=this.value+'px';updatePreview()"
+          style="width:100%;accent-color:var(--pink);">
+      </div>
+      <div class="form-group">
+        <div class="sect-label">SARLAVHA RANGI</div>
+        <div class="color-row" id="titleSwatches"></div>
+      </div>
+      <div class="form-group">
+        <div class="sect-label">HARAKAT EFFEKTI</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;">
+          <span class="fx-btn active" data-fx="none" onclick="pickFx(this)">Oddiy</span>
+          <span class="fx-btn" data-fx="glow" onclick="pickFx(this)">✨ Glow</span>
+          <span class="fx-btn" data-fx="typewriter" onclick="pickFx(this)">⌨ Type</span>
+          <span class="fx-btn" data-fx="float" onclick="pickFx(this)">🌊 Float</span>
+          <span class="fx-btn" data-fx="pulse" onclick="pickFx(this)">💓 Pulse</span>
+          <span class="fx-btn" data-fx="neon" onclick="pickFx(this)">💡 Neon</span>
+          <span class="fx-btn" data-fx="shake" onclick="pickFx(this)">🌀 Shake</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="sect-label">FONT EFFEKTI</div>
+        <div style="display:flex;flex-wrap:wrap;gap:3px;">
+          <span class="fx-btn active" data-fe="none" onclick="pickFe(this)">Oddiy</span>
+          <span class="fx-btn" data-fe="shadow" onclick="pickFe(this)">🌫 Shadow</span>
+          <span class="fx-btn" data-fe="outline" onclick="pickFe(this)">◻ Outline</span>
+          <span class="fx-btn" data-fe="gradient-pink" onclick="pickFe(this)">🌸 Gradient</span>
+          <span class="fx-btn" data-fe="gradient-gold" onclick="pickFe(this)">✨ Gold</span>
+        </div>
+      </div>
+
+      <!-- XABAR -->
+      <div style="border-top:0.5px solid var(--border);padding-top:14px;margin-top:4px;">
+        <div class="form-group">
+          <div class="sect-label">XABAR MATNI</div>
+          <textarea id="message_text" rows="5" placeholder="Xabaringizni yozing..." oninput="updatePreview()" style="resize:vertical;font-family:inherit;"></textarea>
+        </div>
+        <div class="form-group">
+          <div class="sect-label">XABAR SHRIFTI</div>
+          <div style="display:flex;flex-wrap:wrap;gap:3px;">
+            <span class="fx-btn active" data-font="Crimson Pro" onclick="pickFont(this)">Crimson</span>
+            <span class="fx-btn" data-font="EB Garamond" onclick="pickFont(this)">Garamond</span>
+            <span class="fx-btn" data-font="Lora" onclick="pickFont(this)">Lora</span>
+            <span class="fx-btn" data-font="Nunito" onclick="pickFont(this)">Nunito</span>
+            <span class="fx-btn" data-font="Raleway" onclick="pickFont(this)">Raleway</span>
+            <span class="fx-btn" data-font="Caveat" onclick="pickFont(this)">Caveat</span>
+            <span class="fx-btn" data-font="Inter" onclick="pickFont(this)">Inter</span>
+          </div>
+        </div>
+        <div class="form-group">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+            <div class="sect-label" style="margin-bottom:0;">XABAR O'LCHAMI</div>
+            <span id="msgSizeVal" style="font-size:12px;color:var(--muted);">18px</span>
+          </div>
+          <input type="range" min="12" max="28" value="18" id="message_size"
+            oninput="cfg.message_size=parseInt(this.value);document.getElementById('msgSizeVal').textContent=this.value+'px';updatePreview()"
+            style="width:100%;accent-color:var(--pink);">
+        </div>
+        <div class="form-group">
+          <div class="sect-label">XABAR RANGI</div>
+          <div class="color-row" id="msgSwatches"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BEZAK TAB -->
+    <div class="tab-content" id="tab-dec">
+      <div class="sect-label" style="margin-bottom:12px;">BEZAKLAR (bir nechta tanlash mumkin)</div>
+      <div class="dec-grid" id="decGrid"></div>
+
+      <!-- Bezak sozlamalari paneli -->
+      <div id="decSettings" style="display:none;margin-top:12px;padding:14px;background:rgba(255,255,255,0.03);border:0.5px solid var(--border);border-radius:10px;">
+        <div id="decSettingsTitle" style="font-size:11px;letter-spacing:2px;color:var(--pink-l);margin-bottom:14px;font-weight:500;"></div>
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:12px;color:var(--muted);">Miqdori</span>
+            <span id="decCountVal" style="font-size:12px;color:var(--text);">22</span>
+          </div>
+          <input type="range" min="5" max="60" value="22" id="decCount" oninput="updateDecSetting('count',this)" style="width:100%;accent-color:var(--pink);">
+        </div>
+        <div style="margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:12px;color:var(--muted);">Tezligi</span>
+            <span id="decSpeedVal" style="font-size:12px;color:var(--text);">1.0×</span>
+          </div>
+          <input type="range" min="2" max="30" value="10" id="decSpeed" oninput="updateDecSetting('speed',this)" style="width:100%;accent-color:var(--pink);">
+        </div>
+        <div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+            <span style="font-size:12px;color:var(--muted);">Shaffoflik</span>
+            <span id="decOpacityVal" style="font-size:12px;color:var(--text);">65%</span>
+          </div>
+          <input type="range" min="10" max="100" value="65" id="decOpacity" oninput="updateDecSetting('opacity',this)" style="width:100%;accent-color:var(--pink);">
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIO TAB -->
+    <div class="tab-content" id="tab-audio">
+      <div class="sect-label">MUSIQA TANLANG</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px;">
+        <select id="audioSelect" onchange="onAudioSelect()" style="flex:1;padding:9px 12px;">
+          <option value="">— Musiqasiz —</option>
+        </select>
+        <button id="audioPreviewBtn" onclick="previewSelectedAudio()" title="Tinglash / To'xtatish"
+          style="width:36px;height:38px;flex-shrink:0;border-radius:8px;border:0.5px solid var(--border);background:rgba(255,255,255,0.05);color:var(--text);cursor:pointer;font-size:13px;">▶</button>
+      </div>
+
+      <div style="margin-bottom:14px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px;">
+          <input type="checkbox" id="audio_autoplay" onchange="updatePreview()">
+          <span style="font-size:13px;">Avtomatik boshlash</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" id="audio_hidden" onchange="updatePreview()">
+          <span style="font-size:13px;">Tugmani yashirish</span>
+        </label>
+      </div>
+
+      <div style="border-top:0.5px solid var(--border);padding-top:16px;">
+        <div class="sect-label">YANGI MUSIQA YUKLASH</div>
+        <input type="file" accept="audio/*,audio/mp3,audio/mpeg,audio/wav,audio/ogg" id="audioFile" style="margin-bottom:8px;">
+        <button class="btn btn-outline btn-sm" onclick="uploadAudio()" style="width:100%;">⬆ Yuklash</button>
+        <div id="uploadMsg" style="font-size:13px;margin-top:8px;text-align:center;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PREVIEW -->
+  <div class="preview-wrap">
+    <span class="preview-label">LIVE PREVIEW</span>
+    <iframe class="preview-frame" id="previewFrame" sandbox="allow-scripts allow-same-origin"></iframe>
+  </div>
+</div>
+
+<!-- SAVE BAR -->
+<div class="save-bar">
+  <select id="statusSel" style="width:auto;padding:8px 12px;">
+    <option value="draft">Qoralama</option>
+    <option value="published">Nashr etish</option>
+  </select>
+  <button class="btn btn-primary" onclick="saveConfig()">💾 Saqlash</button>
+  <a href="/dashboard/qrcodes/{{ template_id }}/" class="btn btn-outline">📥 QR</a>
+  <a href="/i/{{ qr_slug }}/" target="_blank" class="btn btn-outline">👁 Ko'rish</a>
+  <span id="saveMsg" style="font-size:13px;color:#5edb8a;margin-left:4px;"></span>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const TEMPLATE_ID = {{ template_id }};
+
+// ── CONFIG ────────────────────────────────────────────────────
+let cfg = {
+  bg_type:'color', bg_value:'#09080f', bg_overlay:0,
+  title_text:'', title_font:'Playfair Display', title_size:42,
+  title_color:'#fff5f7', title_effect:'none', title_font_effect:'none',
+  message_text:'', message_font:'Crimson Pro', message_size:18,
+  message_color:'rgba(255,235,240,0.88)',
+  decorations:[], audio_file_url:'', audio_autoplay:false, audio_hidden:false,
+};
+let selectedAudioId = null;
+
+// ── PALITRA ───────────────────────────────────────────────────
+const BG_COLORS  = [
+  '#09080f','#1a0a14','#0d1a2e','#0a1a0a',
+  '#1a1a2e','#2d1b33','#1a0808','#0a0a1e',
+  '#fff8f0','#f0f8ff',
+];
+const GRADIENTS  = [
+  // Romantik
+  'linear-gradient(135deg,#1a0a14,#2d0a1e)',
+  'linear-gradient(180deg,#1a0a14,#3d1030)',
+  'linear-gradient(135deg,#2d1b33,#1a0a2e)',
+  'linear-gradient(135deg,#3d0a1e,#1a0a14)',
+  // Okean
+  'linear-gradient(135deg,#0d1a2e,#1e2d4a)',
+  'linear-gradient(180deg,#0a0e27,#0d2240)',
+  'linear-gradient(135deg,#001a3e,#0a2d5e)',
+  // O\'rmon
+  'linear-gradient(135deg,#0a1a0a,#1e3a1e)',
+  'linear-gradient(135deg,#0d1a0a,#2a4a1a)',
+  // Tun
+  'linear-gradient(180deg,#0a0a1e,#1a1a3e)',
+  'linear-gradient(135deg,#1a0a2e,#0a0a1e)',
+  // Quyosh botishi
+  'linear-gradient(135deg,#3d1a0a,#2d0a1e)',
+  'linear-gradient(180deg,#2d0a1e,#3d1a0a)',
+  // Yorug\'
+  'linear-gradient(135deg,#f0e8f8,#ffe4f0)',
+  'linear-gradient(135deg,#e8f0ff,#f8e8ff)',
+];
+const TITLE_COLORS = [
+  '#ffffff','#fff5f7','#ffb3c6','#f8bbd0',
+  '#ffd700','#e8e8ff','#ffe4b5','#a0f0ff','#c8ffc8',
+];
+const MSG_COLORS   = [
+  'rgba(255,235,240,0.88)','rgba(255,255,255,0.8)',
+  '#ffb3c6','#fff5f7','rgba(200,220,255,0.9)','rgba(255,240,200,0.9)',
+  'rgba(200,255,220,0.85)','rgba(255,200,150,0.85)',
+];
+const DECS = [
+  {key:'hearts',      icon:'❤️',  label:'Yuraklar'},
+  {key:'petals',      icon:'🌸',  label:'Gul barglari'},
+  {key:'stars',       icon:'✨',  label:'Yulduzlar'},
+  {key:'snow',        icon:'❄️',  label:'Qor'},
+  {key:'bubbles',     icon:'🫧',  label:'Pufaklar'},
+  {key:'fireworks',   icon:'🎆',  label:'Feyrwerk'},
+  {key:'strawberry',  icon:'🍓',  label:'Qulupnay'},
+  {key:'balloons',    icon:'🎈',  label:'Sharlar'},
+  {key:'roses',       icon:'🌹',  label:'Gullar'},
+  {key:'butterflies', icon:'🦋',  label:'Kapalaklar'},
+  {key:'confetti',    icon:'🎊',  label:'Konfetti'},
+  {key:'leaves',      icon:'🍃',  label:'Barglar'},
+  {key:'diamonds',    icon:'💎',  label:'Olmoslar'},
+  {key:'music',       icon:'🎵',  label:'Notalar'},
+  {key:'kisses',      icon:'💋',  label:"O'pichlar"},
+  {key:'rings',       icon:'💍',  label:'Uzuklar'},
+];
+
+// ── TABS ──────────────────────────────────────────────────────
+function switchTab(name){
+  const names = ['bg','text','dec','audio'];
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active', names[i]===name));
+  document.querySelectorAll('.tab-content').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ── SWATCHES ─────────────────────────────────────────────────
+function buildSwatches(id, colors, cfgKey, isGrad){
+  document.getElementById(id).innerHTML = colors.map(c=>`
+    <div class="swatch" style="background:${c};${isGrad?'width:48px;height:28px;':''}"
+      onclick="pickSwatch('${cfgKey}','${c.replace(/'/g,'\\\'') }',this)"></div>`).join('');
+}
+
+function pickSwatch(key, val, el){
+  cfg[key] = val;
+  el.closest('.color-row').querySelectorAll('.swatch').forEach(s=>s.classList.remove('sel'));
+  el.classList.add('sel');
+  updatePreview();
+}
+
+// ── BG TYPE ───────────────────────────────────────────────────
+function onBgTypeChange(){
+  cfg.bg_type = document.getElementById('bg_type').value;
+  document.getElementById('sec-color').style.display    = cfg.bg_type==='color'    ? '' : 'none';
+  document.getElementById('sec-gradient').style.display = cfg.bg_type==='gradient' ? '' : 'none';
+  document.getElementById('sec-image').style.display    = cfg.bg_type==='image'    ? '' : 'none';
+  updatePreview();
+}
+
+// ── EFFECTS & FONT ────────────────────────────────────────────
+function pickFx(el){
+  el.parentElement.querySelectorAll('[data-fx]').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  cfg.title_effect = el.dataset.fx;
+  updatePreview();
+}
+function pickFont(el){
+  el.parentElement.querySelectorAll('[data-font]').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  cfg.message_font = el.dataset.font;
+  updatePreview();
+}
+
+function pickFe(el){
+  el.parentElement.querySelectorAll('[data-fe]').forEach(e=>e.classList.remove('active'));
+  el.classList.add('active');
+  cfg.title_font_effect = el.dataset.fe;
+  updatePreview();
+}
+
+// ── DECORATIONS ───────────────────────────────────────────────
+let activeDecKey = null;
+
+function buildDecGrid(){
+  document.getElementById('decGrid').innerHTML = DECS.map(d=>`
+    <div class="dec-card" id="dec-${d.key}" onclick="toggleDec('${d.key}')">
+      <div class="icon">${d.icon}</div>${d.label}
+    </div>`).join('');
+}
+
+function _decKey(d){ return typeof d==='string' ? d : d.key; }
+
+function toggleDec(key){
+  const el  = document.getElementById('dec-'+key);
+  const idx = cfg.decorations.findIndex(d=>_decKey(d)===key);
+  if(idx>-1){
+    cfg.decorations.splice(idx,1);
+    el.classList.remove('active');
+    if(activeDecKey===key){ activeDecKey=null; document.getElementById('decSettings').style.display='none'; }
+  } else {
+    cfg.decorations.push({key, count:22, speed:1.0, opacity:0.65});
+    el.classList.add('active');
+    showDecSettings(key);
+  }
+  updatePreview();
+}
+
+function showDecSettings(key){
+  activeDecKey = key;
+  const dec  = cfg.decorations.find(d=>_decKey(d)===key);
+  const meta = DECS.find(d=>d.key===key);
+  document.getElementById('decSettingsTitle').textContent = (meta?.icon||'') + '  ' + (meta?.label||key).toUpperCase();
+  const count   = (dec?.count   != null) ? dec.count   : 22;
+  const speed   = (dec?.speed   != null) ? dec.speed   : 1.0;
+  const opacity = (dec?.opacity != null) ? dec.opacity : 0.65;
+  document.getElementById('decCount').value   = count;
+  document.getElementById('decCountVal').textContent = count;
+  document.getElementById('decSpeed').value   = Math.round(speed*10);
+  document.getElementById('decSpeedVal').textContent = speed.toFixed(1)+'×';
+  document.getElementById('decOpacity').value = Math.round(opacity*100);
+  document.getElementById('decOpacityVal').textContent = Math.round(opacity*100)+'%';
+  document.getElementById('decSettings').style.display = '';
+}
+
+function updateDecSetting(field, el){
+  if(!activeDecKey) return;
+  const idx = cfg.decorations.findIndex(d=>_decKey(d)===activeDecKey);
+  if(idx<0) return;
+  if(typeof cfg.decorations[idx]==='string')
+    cfg.decorations[idx] = {key:cfg.decorations[idx], count:22, speed:1.0, opacity:0.65};
+  const dec = cfg.decorations[idx];
+  if(field==='count'){
+    dec.count = parseInt(el.value);
+    document.getElementById('decCountVal').textContent = dec.count;
+  } else if(field==='speed'){
+    dec.speed = parseInt(el.value)/10;
+    document.getElementById('decSpeedVal').textContent = dec.speed.toFixed(1)+'×';
+  } else if(field==='opacity'){
+    dec.opacity = parseInt(el.value)/100;
+    document.getElementById('decOpacityVal').textContent = el.value+'%';
+  }
+  updatePreview();
+}
+
+// ── AUDIO ─────────────────────────────────────────────────────
+let audioFiles = [];
+
+async function loadAudioList(){
+  audioFiles = await fetch('/api/audio/').then(r=>r.json()).catch(()=>[]);
+  const sel = document.getElementById('audioSelect');
+  const curVal = sel.value;
+  sel.innerHTML = '<option value="">— Musiqasiz —</option>' +
+    audioFiles.map(f=>`<option value="${f.id}" data-url="${f.file_url||''}">${f.name}</option>`).join('');
+  if(selectedAudioId) sel.value = selectedAudioId;
+  else if(curVal)     sel.value = curVal;
+}
+
+function onAudioSelect(){
+  const sel = document.getElementById('audioSelect');
+  const opt = sel.options[sel.selectedIndex];
+  if(sel.value){
+    selectedAudioId    = parseInt(sel.value);
+    cfg.audio_file_url = opt.dataset.url || '';
+  } else {
+    selectedAudioId    = null;
+    cfg.audio_file_url = '';
+  }
+  if(previewAudioEl){ previewAudioEl.pause(); previewAudioEl=null; document.getElementById('audioPreviewBtn').textContent='▶'; }
+  updatePreview();
+}
+
+let previewAudioEl = null;
+function previewSelectedAudio(){
+  const btn = document.getElementById('audioPreviewBtn');
+  if(previewAudioEl){ previewAudioEl.pause(); previewAudioEl=null; btn.textContent='▶'; return; }
+  const sel = document.getElementById('audioSelect');
+  const url = sel.options[sel.selectedIndex]?.dataset?.url;
+  if(!url) return;
+  previewAudioEl = new Audio(url);
+  previewAudioEl.play().then(()=>{ btn.textContent='⏸'; });
+  previewAudioEl.onended = ()=>{ previewAudioEl=null; btn.textContent='▶'; };
+}
+
+async function uploadAudio(){
+  const file = document.getElementById('audioFile').files[0];
+  const msg  = document.getElementById('uploadMsg');
+  if(!file){ msg.textContent='Fayl tanlang'; msg.style.color='#ff8080'; return; }
+  msg.textContent='Yuklanmoqda...'; msg.style.color='var(--muted)';
+
+  const fd = new FormData();
+  fd.append('file', file);
+  fd.append('name', file.name.replace(/\.[^.]+$/,''));
+
+  const res = await fetch('/api/audio/',{
+    method:'POST',
+    headers:{'X-CSRFToken':getCookie('csrftoken')},
+    body: fd
+  });
+  if(res.ok){
+    const data = await res.json();
+    msg.textContent='✓ Yuklandi!'; msg.style.color='#5edb8a';
+    document.getElementById('audioFile').value='';
+    await loadAudioList();
+    // Avtomatik tanlash
+    selectedAudioId    = data.id;
+    cfg.audio_file_url = data.file_url || '';
+    document.getElementById('audioSelect').value = data.id;
+    updatePreview();
+  } else {
+    msg.textContent='Xatolik yuz berdi'; msg.style.color='#ff8080';
+  }
+}
+
+// ── PREVIEW ───────────────────────────────────────────────────
+function collectForm(){
+  cfg.title_text    = document.getElementById('title_text').value;
+  cfg.title_size    = parseInt(document.getElementById('title_size').value);
+  cfg.message_text  = document.getElementById('message_text').value;
+  cfg.message_size  = parseInt(document.getElementById('message_size').value);
+  cfg.bg_overlay    = parseInt(document.getElementById('bg_overlay').value)/100;
+  cfg.audio_autoplay = document.getElementById('audio_autoplay').checked;
+  cfg.audio_hidden   = document.getElementById('audio_hidden').checked;
+  if(cfg.bg_type==='image') cfg.bg_value = document.getElementById('bg_img_url').value;
+}
+
+function buildPreviewHTML(){
+  collectForm();
+
+  const bgCSS = cfg.bg_type==='color'
+    ? `background:${cfg.bg_value}`
+    : cfg.bg_type==='gradient'
+      ? `background:${cfg.bg_value}`
+      : `background:url('${cfg.bg_value}') center/cover no-repeat fixed`;
+
+  const overlayHTML = cfg.bg_overlay>0
+    ? `<div style="position:fixed;inset:0;background:rgba(0,0,0,${cfg.bg_overlay});z-index:1;pointer-events:none;"></div>`
+    : '';
+
+  const fxCSS = {
+    glow:       '@keyframes gp{0%,100%{text-shadow:0 0 40px rgba(255,100,140,.35)}50%{text-shadow:0 0 80px rgba(255,100,140,.8)}} .title{animation:risein 1.5s forwards .7s,gp 3s ease-in-out infinite 2s!important;}',
+    float:      '@keyframes fl{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}} .title{animation:risein 1.5s forwards .7s,fl 3s ease-in-out infinite 2s!important;}',
+    typewriter: '.title{overflow:hidden;white-space:nowrap;border-right:2px solid rgba(255,150,170,.7);width:0;animation:tw 2s steps(30,end) forwards .5s,blink .7s step-end infinite 2.5s;} @keyframes tw{to{width:100%}} @keyframes blink{0%,100%{border-color:transparent}50%{border-color:rgba(255,150,170,.7)}}',
+    pulse:      '@keyframes pl{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}} .title{animation:risein 1.5s forwards .7s,pl 2s ease-in-out infinite 2s!important;}',
+    neon:       '@keyframes np{0%,100%{text-shadow:0 0 8px #ff69b4,0 0 20px #ff69b4,0 0 40px #ff1493}50%{text-shadow:0 0 18px #ff69b4,0 0 45px #ff1493,0 0 80px #c2185b}} .title{animation:risein 1.5s forwards .7s,np 2s ease-in-out infinite 2s!important;}',
+    shake:      '@keyframes sk{0%,100%{transform:rotate(0)}25%{transform:rotate(-1.5deg)}75%{transform:rotate(1.5deg)}} .title{animation:risein 1.5s forwards .7s,sk 0.4s ease-in-out infinite 3s!important;}',
+    none:       '',
+  }[cfg.title_effect] || '';
+
+  const fontEffectCSS = {
+    shadow:          'text-shadow:0 2px 20px rgba(255,100,150,.7),0 0 40px rgba(255,50,100,.4);',
+    outline:         '-webkit-text-stroke:1.5px rgba(255,140,170,.85);color:transparent;',
+    'gradient-pink': 'background:linear-gradient(135deg,#ff69b4,#ffd700);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;',
+    'gradient-gold': 'background:linear-gradient(135deg,#ffd700,#ff8c00);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;',
+    none: '',
+  }[cfg.title_font_effect] || '';
+
+  const audioHTML = cfg.audio_file_url && !cfg.audio_hidden ? `
+    <div id="musicPlayer" style="display:inline-flex;align-items:center;gap:12px;background:rgba(255,255,255,0.05);border:0.5px solid rgba(255,140,170,0.2);border-radius:50px;padding:10px 22px;margin-top:32px;">
+      <button id="playBtn" onclick="toggleAudio()" style="width:36px;height:36px;border-radius:50%;background:rgba(255,100,150,0.2);border:0.5px solid rgba(255,120,160,0.4);cursor:pointer;color:#ffb3c6;font-size:14px;display:flex;align-items:center;justify-content:center;">▶</button>
+      <div id="waveBars" style="display:flex;align-items:center;gap:3px;">
+        ${[6,14,20,12,8].map((h,i)=>`<div style="width:3px;height:${h}px;border-radius:2px;background:rgba(255,140,170,0.65);animation:wave 1.2s ease-in-out infinite ${i*0.12}s;animation-play-state:paused;" class="wb"></div>`).join('')}
+      </div>
+    </div>
+    <audio id="bgAudio" src="${cfg.audio_file_url}" loop ${cfg.audio_autoplay?'autoplay':''}></audio>` : '';
+
+  const decsJSON = JSON.stringify(cfg.decorations);
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@1,400;1,700&family=Crimson+Pro:ital,wght@0,300;1,300&family=Inter:wght@300;400&family=Great+Vibes&family=Dancing+Script:wght@400;700&family=Cinzel:wght@400;700&family=Sacramento&family=Pacifico&family=Lobster&family=Cormorant+Garamond:ital,wght@0,300;1,300&family=EB+Garamond:ital,wght@0,400;1,400&family=Lora:ital,wght@0,400;1,400&family=Nunito:wght@300;400&family=Raleway:wght@300;400&family=Caveat&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{min-height:100vh;font-family:'Crimson Pro',serif;overflow-x:hidden;${bgCSS};}
+canvas#cv{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:2;}
+.page{position:relative;z-index:3;max-width:480px;margin:0 auto;padding:48px 20px 60px;text-align:center;}
+.orn{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:28px;opacity:0;animation:fadein 1.5s forwards .3s;}
+.orn-line{width:40px;height:0.5px;background:rgba(255,150,170,0.35);}
+.hb{animation:hbeat 2s ease-in-out infinite;}
+@keyframes hbeat{0%,100%{transform:scale(1)}50%{transform:scale(1.18)}}
+.title{font-family:'${cfg.title_font}',serif;font-size:${cfg.title_size}px;font-style:italic;color:${cfg.title_color};line-height:1.2;margin-bottom:10px;text-shadow:0 0 40px rgba(255,100,140,.35);opacity:0;animation:risein 1.5s forwards .7s;${fontEffectCSS}}
+${fxCSS}
+.divl{width:50px;height:0.5px;background:rgba(255,150,170,0.5);margin:20px auto;opacity:0;animation:fadein 1.5s forwards 1s;}
+.msg{font-size:${cfg.message_size}px;font-weight:300;font-style:italic;color:${cfg.message_color};font-family:'${cfg.message_font}',Georgia,serif;line-height:1.95;max-width:420px;margin:0 auto;opacity:0;animation:risein 1.5s forwards 1.4s;white-space:pre-line;}
+@keyframes fadein{to{opacity:1}}
+@keyframes risein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+@keyframes wave{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+</style></head>
+<body>
+${overlayHTML}
+<canvas id="cv"></canvas>
+<div class="page">
+  <div class="orn">
+    <div class="orn-line"></div>
+    <svg class="hb" width="18" height="18" viewBox="0 0 24 24" fill="none">
+      <path d="M12 21C12 21 3 14 3 8C3 5.5 5 3 7.5 3C9.2 3 10.7 4 12 5.5C13.3 4 14.8 3 16.5 3C19 3 21 5.5 21 8C21 14 12 21 12 21Z" fill="rgba(220,60,100,.85)" stroke="rgba(255,140,170,.4)" stroke-width="0.5"/>
+    </svg>
+    <div class="orn-line"></div>
+  </div>
+  ${cfg.title_text ? `<div class="title">${esc(cfg.title_text)}</div>` : ''}
+  ${cfg.message_text ? `<div class="divl"></div><div class="msg">${esc(cfg.message_text)}</div>` : ''}
+  ${audioHTML}
+</div>
+<script>
+// Bezaklar
+const cv=document.getElementById('cv'),cx=cv.getContext('2d');
+function rs(){cv.width=window.innerWidth||document.documentElement.clientWidth||375;cv.height=window.innerHeight||document.documentElement.clientHeight||668;}
+window.addEventListener('resize',rs);
+const DECS=${decsJSON};
+const CONF_COL=['rgba(255,80,120,.9)','rgba(80,180,255,.9)','rgba(255,220,80,.9)','rgba(100,220,100,.9)','rgba(220,100,255,.9)'];
+let ptls=[];
+function mkP(type,sp,op){
+  return{x:Math.random()*window.innerWidth,y:-25,r:Math.random()*9+4,
+    vx:(Math.random()-.5)*.9,vy:(Math.random()*1.3+.5)*(sp||1),
+    rot:Math.random()*Math.PI*2,rs:(Math.random()-.5)*.04,
+    o:Math.random()*(op||.65)*.7+(op||.65)*.3,type};}
+DECS.forEach(d=>{
+  const key=typeof d==='string'?d:d.key;
+  const cnt=typeof d==='object'&&d.count?d.count:22;
+  const spd=typeof d==='object'&&d.speed!=null?d.speed:1.0;
+  const opa=typeof d==='object'&&d.opacity!=null?d.opacity:0.65;
+  for(let i=0;i<cnt;i++)ptls.push(mkP(key,spd,opa));
+});
+function drawP(p){
+  cx.save();cx.translate(p.x,p.y);cx.rotate(p.rot);cx.globalAlpha=p.o;
+  const EM={hearts:'♥',stars:'✦',fireworks:'✦',strawberry:'🍓',
+    balloons:'●',roses:'🌹',butterflies:'🦋',leaves:'🍃',
+    diamonds:'💎',music:'♪',kisses:'💋',rings:'💍'};
+  const CL={hearts:'rgba(220,60,100,.9)',stars:'rgba(255,220,80,.9)',
+    fireworks:'rgba(255,180,50,.95)',balloons:'rgba(255,100,150,.85)',
+    roses:'rgba(220,50,80,.85)',butterflies:'rgba(180,80,220,.85)',
+    leaves:'rgba(60,180,80,.85)',diamonds:'rgba(150,220,255,.9)',
+    music:'rgba(255,150,200,.85)',kisses:'rgba(220,60,100,.9)',rings:'rgba(255,215,0,.9)'};
+  if(p.type==='snow'){cx.beginPath();cx.arc(0,0,p.r*.6,0,Math.PI*2);cx.fillStyle='rgba(200,220,255,.85)';cx.fill();}
+  else if(p.type==='bubbles'){cx.beginPath();cx.arc(0,0,p.r,0,Math.PI*2);cx.strokeStyle='rgba(150,200,255,.5)';cx.lineWidth=1;cx.stroke();}
+  else if(p.type==='petals'){cx.beginPath();cx.ellipse(0,0,p.r,p.r*.55,0,0,Math.PI*2);cx.fillStyle='rgba(255,140,170,.75)';cx.fill();}
+  else if(p.type==='confetti'){cx.fillStyle=CONF_COL[Math.floor(Math.abs(p.x+p.y*3))%5];cx.fillRect(-p.r*.6,-p.r*.4,p.r*1.2,p.r*.8);}
+  else{const em=EM[p.type];if(em){cx.font=(p.r*2.2)+'px serif';cx.fillStyle=CL[p.type]||'rgba(255,140,170,.8)';cx.textAlign='center';cx.fillText(em,0,0);}}
+  cx.restore();}
+function anim(){cx.clearRect(0,0,cv.width,cv.height);
+  ptls.forEach((p,i)=>{p.x+=p.vx+Math.sin(Date.now()*.001+i)*.3;p.y+=p.vy;p.rot+=p.rs;
+    if(p.y>cv.height+25){p.y=-25;p.x=Math.random()*cv.width;}drawP(p);});
+  requestAnimationFrame(anim);}
+window.addEventListener('load',()=>{rs();if(DECS.length) anim();});
+
+// Audio
+let playing=false;
+function toggleAudio(){
+  const a=document.getElementById('bgAudio');
+  const btn=document.getElementById('playBtn');
+  const bars=document.querySelectorAll('.wb');
+  if(!a)return;
+  if(playing){a.pause();playing=false;btn.innerHTML='▶';bars.forEach(b=>b.style.animationPlayState='paused');}
+  else{a.play().then(()=>{playing=true;btn.innerHTML='⏸';bars.forEach(b=>b.style.animationPlayState='running');}).catch(e=>console.log(e));}
+}
+window.addEventListener('load',()=>{
+  const a=document.getElementById('bgAudio');
+  if(a&&${cfg.audio_autoplay}){
+    a.play().then(()=>{playing=true;
+      const btn=document.getElementById('playBtn');if(btn)btn.innerHTML='⏸';
+      document.querySelectorAll('.wb').forEach(b=>b.style.animationPlayState='running');
+    }).catch(()=>{});
+  }
+});
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+<\/script></body></html>`;
+}
+
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function updatePreview(){
+  const html  = buildPreviewHTML();
+  const frame = document.getElementById('previewFrame');
+  try{
+    const doc = frame.contentDocument || frame.contentWindow.document;
+    doc.open(); doc.write(html); doc.close();
+  } catch(e){ frame.srcdoc = html; }
+}
+
+// ── SAVE ─────────────────────────────────────────────────────
+async function saveConfig(){
+  collectForm();
+  const payload = {
+    bg_type:           cfg.bg_type,
+    bg_value:          cfg.bg_value,
+    bg_overlay:        cfg.bg_overlay,
+    title_text:        cfg.title_text,
+    title_font:        cfg.title_font,
+    title_size:        cfg.title_size,
+    title_color:       cfg.title_color,
+    title_effect:      cfg.title_effect,
+    title_font_effect: cfg.title_font_effect,
+    message_text:      cfg.message_text,
+    message_font:      cfg.message_font,
+    message_size:      cfg.message_size,
+    message_color:     cfg.message_color,
+    decorations:       cfg.decorations,
+    audio_autoplay:    cfg.audio_autoplay,
+    audio_hidden:      cfg.audio_hidden,
+  };
+  if(selectedAudioId) payload.audio_file_id = selectedAudioId;
+
+  const [r1] = await Promise.all([
+    fetch('/api/templates/'+TEMPLATE_ID+'/config/',{
+      method:'PUT', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body:JSON.stringify(payload)
+    }),
+    fetch('/api/templates/'+TEMPLATE_ID+'/',{
+      method:'PUT', headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+      body:JSON.stringify({status:document.getElementById('statusSel').value})
+    }),
+  ]);
+  const msg = document.getElementById('saveMsg');
+  if(r1.ok){ msg.textContent='✓ Saqlandi!'; }
+  else      { msg.textContent='Xatolik!'; msg.style.color='#ff8080'; }
+  setTimeout(()=>{ msg.textContent=''; msg.style.color='#5edb8a'; }, 2500);
+}
+
+// ── LOAD EXISTING ─────────────────────────────────────────────
+async function loadExisting(){
+  const data = await fetch('/api/templates/'+TEMPLATE_ID+'/').then(r=>r.json());
+  const c = data.config||{};
+
+  if(c.bg_type)  { cfg.bg_type=c.bg_type; document.getElementById('bg_type').value=c.bg_type; onBgTypeChange(); }
+  if(c.bg_value) { cfg.bg_value=c.bg_value; document.getElementById('bg_picker').value=c.bg_type==='color'?c.bg_value:'#09080f'; if(c.bg_type==='image') document.getElementById('bg_img_url').value=c.bg_value; }
+  if(c.bg_overlay){ cfg.bg_overlay=c.bg_overlay; const pct=Math.round(c.bg_overlay*100); document.getElementById('bg_overlay').value=pct; document.getElementById('ov_val').textContent=pct+'%'; }
+  if(c.title_text)   { cfg.title_text=c.title_text;   document.getElementById('title_text').value=c.title_text; }
+  if(c.title_font)   { cfg.title_font=c.title_font;   document.getElementById('title_font').value=c.title_font; }
+  if(c.title_size)   { cfg.title_size=c.title_size;   document.getElementById('title_size').value=c.title_size; document.getElementById('titleSizeVal').textContent=c.title_size+'px'; }
+  if(c.title_color)  { cfg.title_color=c.title_color; }
+  if(c.title_effect) { cfg.title_effect=c.title_effect; document.querySelector(`[data-fx="${c.title_effect}"]`)?.classList.add('active'); document.querySelector('[data-fx="none"]')?.classList.remove('active'); }
+  if(c.title_font_effect && c.title_font_effect!=='none') { cfg.title_font_effect=c.title_font_effect; document.querySelector(`[data-fe="${c.title_font_effect}"]`)?.classList.add('active'); document.querySelector('[data-fe="none"]')?.classList.remove('active'); }
+  if(c.message_text) { cfg.message_text=c.message_text; document.getElementById('message_text').value=c.message_text; }
+  if(c.message_color){ cfg.message_color=c.message_color; }
+  if(c.message_font) { cfg.message_font=c.message_font; document.querySelector(`[data-font="${c.message_font}"]`)?.classList.add('active'); document.querySelector('[data-font="Crimson Pro"]')?.classList.remove('active'); }
+  if(c.message_size) { cfg.message_size=c.message_size; document.getElementById('message_size').value=c.message_size; document.getElementById('msgSizeVal').textContent=c.message_size+'px'; }
+  if(c.decorations?.length){
+    cfg.decorations = c.decorations;
+    c.decorations.forEach(d=>{
+      const key = typeof d==='string'?d:d.key;
+      document.getElementById('dec-'+key)?.classList.add('active');
+    });
+    const first = c.decorations[0];
+    if(first) showDecSettings(typeof first==='string'?first:first.key);
+  }
+  if(c.audio_autoplay) document.getElementById('audio_autoplay').checked=true;
+  if(c.audio_hidden)   document.getElementById('audio_hidden').checked=true;
+  if(c.audio_url){
+    cfg.audio_file_url = c.audio_url;
+    // Dropdown da mos keladigani tanlash
+    const sel = document.getElementById('audioSelect');
+    for(const opt of sel.options){
+      if(opt.dataset.url===c.audio_url){ sel.value=opt.value; selectedAudioId=parseInt(opt.value); break; }
+    }
+  }
+  if(data.status)      document.getElementById('statusSel').value=data.status;
+
+  updatePreview();
+}
+
+function getCookie(n){ let v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)'); return v?v.pop():''; }
+
+// ── INIT ──────────────────────────────────────────────────────
+buildSwatches('bgSwatches',    BG_COLORS,    'bg_value',    false);
+buildSwatches('gradSwatches',  GRADIENTS,    'bg_value',    true);
+buildSwatches('titleSwatches', TITLE_COLORS, 'title_color', false);
+buildSwatches('msgSwatches',   MSG_COLORS,   'message_color', false);
+buildDecGrid();
+(async()=>{ await loadAudioList(); await loadExisting(); })();
+</script>
+{% endblock %}

@@ -1,0 +1,71 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv/
+.env/
+
+# Django
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Media va Static (serverda to'planadi)
+media/
+staticfiles/
+
+# Environment variables
+.env
+.env.local
+.env.production
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Secrets
+secret_key.txt
+*.pem
+*.key
+
+# Migrations (ixtiyoriy — ba'zilar qo'shadi)
+# apps/*/migrations/
+
+# Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.venv
+*venv

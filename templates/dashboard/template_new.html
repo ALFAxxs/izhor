@@ -1,0 +1,50 @@
+{% extends "base/layout.html" %}
+{% block title %}Yangi Shablon{% endblock %}
+{% block nav_templates %}active{% endblock %}
+{% block content %}
+<div class="page-title">Yangi Shablon Yaratish</div>
+<div class="card" style="max-width:480px;">
+  <div id="alertBox"></div>
+  <div class="form-group">
+    <label>Shablon nomi *</label>
+    <input type="text" id="title" placeholder="Masalan: Valentina uchun izhor">
+  </div>
+  <div class="form-group">
+    <label>Kategoriya</label>
+    <select id="category">
+      <option value="">Tanlang...</option>
+    </select>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:8px;">
+    <button class="btn btn-primary" onclick="createTemplate()">Yaratish va Builder ga o'tish →</button>
+    <a href="/dashboard/templates/" class="btn btn-outline">Bekor qilish</a>
+  </div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function init(){
+  const cats = await fetch('/api/categories/').then(r=>r.json());
+  const sel  = document.getElementById('category');
+  cats.forEach(c=>{ const o=document.createElement('option'); o.value=c.id; o.textContent=c.icon+' '+c.name; sel.appendChild(o); });
+}
+
+async function createTemplate(){
+  const title = document.getElementById('title').value.trim();
+  const cat   = document.getElementById('category').value;
+  const box   = document.getElementById('alertBox');
+  if(!title){ box.innerHTML='<div class="alert alert-error">Shablon nomini kiriting.</div>'; return; }
+
+  const res = await fetch('/api/templates/',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','X-CSRFToken':getCookie('csrftoken')},
+    body:JSON.stringify({title, category:cat||null})
+  });
+  const data = await res.json();
+  if(res.ok){ window.location='/dashboard/templates/'+data.id+'/builder/'; }
+  else { box.innerHTML='<div class="alert alert-error">Xatolik: '+JSON.stringify(data)+'</div>'; }
+}
+function getCookie(n){let v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+init();
+</script>
+{% endblock %}
