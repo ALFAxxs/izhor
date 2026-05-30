@@ -29,4 +29,4 @@ izhor/
 | QRCode          | Har bir shablon uchun unique slug + QR rasm |
 | ScanLog         | Har bir scan logi (device, IP, vaqt)        |
 
-## Keyingi qadam: API va Builder
+
