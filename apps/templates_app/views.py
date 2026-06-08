@@ -3,7 +3,7 @@ from rest_framework.decorators import api_view, permission_classes, parser_class
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from .models import Category, IzhorTemplate, TemplateConfig, AudioFile
+from .models import Category, IzhorTemplate, TemplateConfig, AudioFile, EventTemplate
 from .serializers import (
     CategorySerializer, TemplateListSerializer, TemplateDetailSerializer,
     TemplateCreateSerializer, TemplateConfigUpdateSerializer, AudioFileSerializer
@@ -132,6 +132,70 @@ def _create_qr(template, request):
     base_url = request.build_absolute_uri(f'/i/{slug}')
     qr_img   = generate_qr_image(base_url, slug)
     qr = QRCode(template=template, slug=slug)
+    qr.qr_image.save(f'qr_{slug}.png', qr_img, save=False)
+    qr.save()
+    return qr
+
+
+# ─── EVENT TEMPLATES (to'y, osh) ───────────────────────────────
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def event_template_list(request):
+    merchant = get_merchant(request)
+    from .serializers import EventTemplateSerializer
+
+    if request.method == 'GET':
+        etype = request.GET.get('event_type')
+        qs = EventTemplate.objects.filter(merchant=merchant)
+        if etype:
+            qs = qs.filter(event_type=etype)
+        return Response(EventTemplateSerializer(qs, many=True, context={'request': request}).data)
+
+    serializer = EventTemplateSerializer(data=request.data, context={'request': request})
+    if serializer.is_valid():
+        event = serializer.save(merchant=merchant)
+        _create_event_qr(event, request)
+        return Response(
+            EventTemplateSerializer(event, context={'request': request}).data,
+            status=status.HTTP_201_CREATED
+        )
+    return Response(serializer.errors, status=400)
+
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])
+def event_template_detail(request, pk):
+    merchant = get_merchant(request)
+    from .serializers import EventTemplateSerializer
+    try:
+        event = EventTemplate.objects.get(pk=pk, merchant=merchant)
+    except EventTemplate.DoesNotExist:
+        return Response({'error': 'Topilmadi.'}, status=404)
+
+    if request.method == 'GET':
+        return Response(EventTemplateSerializer(event, context={'request': request}).data)
+
+    if request.method == 'PUT':
+        serializer = EventTemplateSerializer(event, data=request.data, partial=True, context={'request': request})
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    event.delete()
+    return Response(status=204)
+
+
+def _create_event_qr(event, request):
+    from apps.qr_system.models import EventQRCode
+    from apps.qr_system.utils import make_unique_slug, generate_qr_image
+    slug     = make_unique_slug()
+    base_url = request.build_absolute_uri(f'/e/{slug}')
+    qr_img   = generate_qr_image(base_url, slug)
+    qr = EventQRCode(event_template=event, slug=slug)
     qr.qr_image.save(f'qr_{slug}.png', qr_img, save=False)
     qr.save()
     return qr

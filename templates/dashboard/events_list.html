@@ -1,0 +1,57 @@
+{% extends "base/layout.html" %}
+{% block title %}Taklifnomalar{% endblock %}
+{% block nav_events %}active{% endblock %}
+{% block content %}
+<div class="page-title">
+  Taklifnomalar
+  <a href="/dashboard/events/new/" class="btn btn-primary btn-sm" style="vertical-align:middle;margin-left:12px;">+ Yangi taklifnoma</a>
+</div>
+
+<div class="card" style="padding:16px;margin-bottom:16px;">
+  <select id="typeFilter" onchange="loadEvents()" style="width:auto;padding:8px 12px;">
+    <option value="">Barcha turlar</option>
+    <option value="wedding">💍 Nikoh to'yi</option>
+    <option value="osh">🍽 Osh marosimi</option>
+  </select>
+</div>
+
+<div class="card" style="padding:0;overflow:hidden;">
+  <table>
+    <thead><tr><th>NOMI</th><th>TURI</th><th>SANA</th><th>HOLAT</th><th>KO'RISHLAR</th><th>AMALLAR</th></tr></thead>
+    <tbody id="tBody"><tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted);">Yuklanmoqda...</td></tr></tbody>
+  </table>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+async function loadEvents(){
+  const type = document.getElementById('typeFilter').value;
+  let url = '/api/events/';
+  if(type) url += '?event_type='+type;
+  const data = await fetch(url).then(r=>r.json());
+  const tbody = document.getElementById('tBody');
+  if(!data.length){ tbody.innerHTML='<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--muted);">Taklifnoma yo\'q</td></tr>'; return; }
+  tbody.innerHTML = data.map(e=>`
+    <tr>
+      <td><strong>${e.title}</strong></td>
+      <td>${e.event_type==='wedding'?'💍 Nikoh':'🍽 Osh'}</td>
+      <td style="font-size:13px;color:var(--muted);">${e.event_date?e.event_date.slice(0,10):'—'}</td>
+      <td><span class="badge ${e.status==='published'?'badge-green':'badge-gray'}">${e.status==='published'?'Nashr':'Qoralama'}</span></td>
+      <td>${e.view_count||0}</td>
+      <td style="display:flex;gap:6px;">
+        <a href="/dashboard/events/${e.id}/edit/" class="btn btn-outline btn-sm">Tahrirlash</a>
+        ${e.qr_slug?`<a href="/api/qr/event-download/${e.qr_slug}/" class="btn btn-primary btn-sm">QR</a>`:''}
+        ${e.qr_slug?`<a href="/e/${e.qr_slug}/" target="_blank" class="btn btn-outline btn-sm">👁</a>`:''}
+        <button onclick="delEvent(${e.id})" class="btn btn-danger btn-sm">×</button>
+      </td>
+    </tr>`).join('');
+}
+async function delEvent(id){
+  if(!confirm('O\'chirasizmi?'))return;
+  await fetch('/api/events/'+id+'/',{method:'DELETE',headers:{'X-CSRFToken':getCookie('csrftoken')}});
+  loadEvents();
+}
+function getCookie(n){let v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+loadEvents();
+</script>
+{% endblock %}

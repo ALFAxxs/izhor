@@ -33,3 +33,11 @@ class ScanLogAdmin(admin.ModelAdmin):
     list_display  = ('qr_code', 'device_type', 'country', 'city', 'ip_address', 'scanned_at')
     list_filter   = ('device_type', 'country')
     readonly_fields = ('scanned_at',)
+
+
+from .models import EventQRCode
+
+@admin.register(EventQRCode)
+class EventQRCodeAdmin(admin.ModelAdmin):
+    list_display    = ('slug', 'event_template', 'is_active', 'created_at')
+    readonly_fields = ('slug', 'qr_image', 'created_at')

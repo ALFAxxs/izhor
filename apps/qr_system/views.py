@@ -3,7 +3,6 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.http import HttpResponse
 from .models import QRCode, ScanLog
-import io
 
 
 @api_view(['GET'])
@@ -69,3 +68,19 @@ def merchant_analytics(request):
         'qr_limit':        merchant.qr_limit,
         'plan':            merchant.plan,
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def event_qr_download(request, slug):
+    from .models import EventQRCode
+    try:
+        qr = EventQRCode.objects.get(slug=slug, event_template__merchant__user=request.user)
+    except EventQRCode.DoesNotExist:
+        return Response({'error': 'Topilmadi.'}, status=404)
+    if not qr.qr_image:
+        return Response({'error': 'QR rasm yo\'q.'}, status=404)
+    with qr.qr_image.open('rb') as f:
+        resp = HttpResponse(f.read(), content_type='image/png')
+        resp['Content-Disposition'] = f'attachment; filename="qr_{slug}.png"'
+        return resp

@@ -14,10 +14,11 @@ def generate_slug(length=8):
 
 
 def make_unique_slug():
-    from apps.qr_system.models import QRCode
+    from apps.qr_system.models import QRCode, EventQRCode
     while True:
         slug = generate_slug()
-        if not QRCode.objects.filter(slug=slug).exists():
+        if not QRCode.objects.filter(slug=slug).exists() and \
+           not EventQRCode.objects.filter(slug=slug).exists():
             return slug
 
 

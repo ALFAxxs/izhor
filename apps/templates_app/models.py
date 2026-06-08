@@ -78,8 +78,38 @@ class AudioFile(models.Model):
     merchant    = models.ForeignKey(Merchant, on_delete=models.CASCADE, related_name='audio_files')
     name        = models.CharField(max_length=200)
     file        = models.FileField(upload_to='audio/')
-    duration    = models.PositiveIntegerField(default=0)  # soniyada
+    duration    = models.PositiveIntegerField(default=0)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
+
+
+class EventTemplate(models.Model):
+    """To'y va osh taklifnomalari uchun model"""
+
+    class EventType(models.TextChoices):
+        WEDDING = 'wedding', "Nikoh to'yi"
+        OSH     = 'osh',     'Osh marosimi'
+
+    merchant        = models.ForeignKey(Merchant, on_delete=models.CASCADE, related_name='event_templates')
+    event_type      = models.CharField(max_length=20, choices=EventType.choices)
+    title           = models.CharField(max_length=200)
+    status          = models.CharField(max_length=20, default='draft')
+    view_count      = models.PositiveIntegerField(default=0)
+
+    couple_names    = models.CharField(max_length=200, blank=True)
+    invite_text     = models.TextField(blank=True)
+    event_date      = models.DateTimeField(null=True, blank=True)
+    venue_name      = models.CharField(max_length=200, blank=True)
+    venue_address   = models.CharField(max_length=300, blank=True)
+    map_url         = models.URLField(blank=True)
+    audio_file      = models.FileField(upload_to='audio/', blank=True, null=True)
+
+    meal_type       = models.CharField(max_length=50, blank=True, default='Ertalabki osh')
+
+    created_at      = models.DateTimeField(auto_now_add=True)
+    updated_at      = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.get_event_type_display()} — {self.title}"

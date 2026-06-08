@@ -25,3 +25,13 @@ class IzhorTemplateAdmin(admin.ModelAdmin):
 @admin.register(AudioFile)
 class AudioFileAdmin(admin.ModelAdmin):
     list_display = ('name', 'merchant', 'duration', 'uploaded_at')
+
+
+from .models import EventTemplate
+
+@admin.register(EventTemplate)
+class EventTemplateAdmin(admin.ModelAdmin):
+    list_display    = ('title', 'event_type', 'merchant', 'status', 'event_date', 'view_count')
+    list_filter     = ('event_type', 'status')
+    search_fields   = ('title', 'merchant__shop_name', 'couple_names')
+    readonly_fields = ('view_count', 'created_at', 'updated_at')

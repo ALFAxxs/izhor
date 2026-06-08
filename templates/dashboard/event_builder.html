@@ -1,0 +1,252 @@
+{% extends "base/layout.html" %}
+{% block title %}Taklifnoma Builder{% endblock %}
+{% block nav_events %}active{% endblock %}
+{% block extra_css %}
+<style>
+.eb-wrap{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 64px);margin:-32px;overflow:hidden;}
+.eb-panel{overflow-y:auto;background:rgba(255,255,255,0.02);border-right:0.5px solid var(--border);padding:18px;}
+.eb-preview{position:relative;background:#09080f;display:flex;align-items:center;justify-content:center;overflow:hidden;}
+.eb-frame{width:375px;height:668px;border:none;border-radius:24px;box-shadow:0 0 80px rgba(194,24,91,0.25);}
+.eb-label{position:absolute;top:12px;right:12px;font-size:11px;letter-spacing:1px;color:rgba(240,224,232,0.25);}
+.eb-save{position:fixed;bottom:0;left:220px;right:0;background:rgba(26,10,20,0.97);border-top:0.5px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:12px;z-index:50;backdrop-filter:blur(8px);}
+.sl{font-size:10px;letter-spacing:2px;color:var(--muted);margin-bottom:8px;font-weight:600;}
+.type-row{display:flex;gap:8px;margin-bottom:16px;}
+.type-btn{flex:1;padding:14px;border-radius:10px;border:0.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;text-align:center;transition:all .2s;}
+.type-btn.active{background:rgba(194,24,91,0.15);border-color:var(--pink);color:var(--pink-l);}
+.type-btn .ic{font-size:24px;display:block;margin-bottom:4px;}
+</style>
+{% endblock %}
+{% block content %}
+<div class="eb-wrap">
+  <div class="eb-panel">
+    <div class="sl">TAKLIFNOMA TURI</div>
+    <div class="type-row">
+      <div class="type-btn active" data-type="wedding" onclick="pickType('wedding',this)"><span class="ic">💍</span>Nikoh to'yi</div>
+      <div class="type-btn" data-type="osh" onclick="pickType('osh',this)"><span class="ic">🍽</span>Osh marosimi</div>
+    </div>
+
+    <div class="form-group">
+      <div class="sl">SHABLON NOMI (ichki)</div>
+      <input type="text" id="title" placeholder="Masalan: Jahongir to'yi" oninput="updatePreview()">
+    </div>
+
+    <div class="form-group" id="coupleGroup">
+      <div class="sl">EGALARI / ISMLAR</div>
+      <input type="text" id="couple_names" placeholder="Jahongir & Feruza" oninput="updatePreview()">
+    </div>
+
+    <div class="form-group">
+      <div class="sl">TAKLIF MATNI</div>
+      <textarea id="invite_text" rows="3" placeholder="Taklif matni..." oninput="updatePreview()" style="resize:vertical;font-family:inherit;"></textarea>
+    </div>
+
+    <div class="form-group">
+      <div class="sl">SANA VA SOAT</div>
+      <input type="datetime-local" id="event_date" oninput="updatePreview()">
+    </div>
+
+    <div class="form-group">
+      <div class="sl">JOY NOMI</div>
+      <input type="text" id="venue_name" placeholder="Ramada Ballroom" oninput="updatePreview()">
+    </div>
+
+    <div class="form-group">
+      <div class="sl">MANZIL</div>
+      <input type="text" id="venue_address" placeholder="Toshkent, Amir Temur 94" oninput="updatePreview()">
+    </div>
+
+    <div class="form-group">
+      <div class="sl">KARTA LINKI (2GIS / Google Maps)</div>
+      <input type="text" id="map_url" placeholder="https://go.2gis.com/..." oninput="updatePreview()">
+    </div>
+
+    <div class="form-group" id="mealGroup" style="display:none;">
+      <div class="sl">OSH TURI</div>
+      <select id="meal_type" onchange="updatePreview()">
+        <option value="Ertalabki osh">Ertalabki osh</option>
+        <option value="Kechki osh">Kechki osh</option>
+        <option value="Nahorgi osh">Nahorgi osh</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <div class="sl">MUSIQA YUKLASH</div>
+      <input type="file" accept="audio/*" id="audioFile" style="font-size:12px;">
+    </div>
+  </div>
+
+  <div class="eb-preview">
+    <span class="eb-label">LIVE PREVIEW</span>
+    <iframe class="eb-frame" id="ebFrame"></iframe>
+  </div>
+</div>
+
+<div class="eb-save">
+  <select id="statusSel" style="width:auto;padding:8px 12px;">
+    <option value="draft">Qoralama</option>
+    <option value="published">Nashr etish</option>
+  </select>
+  <button class="btn btn-primary" onclick="saveEvent()">💾 Saqlash</button>
+  <span id="saveMsg" style="font-size:13px;color:#5edb8a;"></span>
+  <span id="qrLink"></span>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+const EVENT_ID = "{{ event_id }}";
+let eventType = 'wedding';
+
+function pickType(t, el){
+  eventType = t;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('mealGroup').style.display   = t==='osh' ? '' : 'none';
+  document.getElementById('coupleGroup').style.display = t==='wedding' ? '' : 'none';
+  updatePreview();
+}
+
+function val(id){ return document.getElementById(id).value; }
+
+function buildPreview(){
+  const isWedding = eventType==='wedding';
+  const couple    = val('couple_names') || 'Jahongir & Feruza';
+  const invite    = val('invite_text');
+  const dateRaw   = val('event_date');
+  const venue     = val('venue_name') || "To'yxona";
+  const addr      = val('venue_address');
+  const meal      = val('meal_type') || 'Ertalabki osh';
+  let dateStr = 'Tez orada';
+  if(dateRaw){
+    const d = new Date(dateRaw);
+    dateStr = String(d.getDate()).padStart(2,'0')+'.'+String(d.getMonth()+1).padStart(2,'0')+'.'+d.getFullYear()+' / soat '+String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');
+  }
+
+  const green = isWedding ? '#3d6b44' : '#2d6a2d';
+  const titleBlock = isWedding
+    ? `<div style="font-family:'Cormorant Garamond',serif;font-size:38px;font-weight:300;color:#2c2416;margin-bottom:10px;">${esc(couple)}</div>`
+    : `<div style="font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:600;color:${green};text-transform:uppercase;letter-spacing:2px;line-height:1.1;">Hurmatli<br>Mehmonlar!</div>`;
+
+  const inviteBlock = invite
+    ? `<div style="background:#e8f5e8;border-left:3px solid ${green};border-radius:12px;padding:16px;margin:14px 16px;font-family:'Cormorant Garamond',serif;font-size:17px;line-height:1.6;text-align:center;color:#2c2416;">${esc(invite)}</div>`
+    : (!isWedding ? `<div style="background:#e8f5e8;border-left:3px solid ${green};border-radius:12px;padding:16px;margin:14px 16px;font-family:'Cormorant Garamond',serif;font-size:17px;line-height:1.6;text-align:center;color:#2c2416;">Ertalabki palovimiz uchun sizlarni muhtasham oq dasturxonimizning faxriy mehmoni bo'lishga taklif qilamiz.</div>` : '');
+
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;600&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet">
+<style>*{margin:0;padding:0;box-sizing:border-box;}body{background:#faf7f2;font-family:'Montserrat',sans-serif;color:#2c2416;padding:30px 0 40px;}
+.card{background:rgba(255,255,255,0.75);border:0.5px solid rgba(200,169,110,0.25);border-radius:14px;padding:18px 20px;margin:0 16px 12px;}
+.lbl{font-size:10px;letter-spacing:3px;color:#8a7a6a;text-transform:uppercase;margin-bottom:5px;font-weight:600;}
+.vl{font-family:'Cormorant Garamond',serif;font-size:22px;color:#2c2416;}
+.cd-grid{display:flex;justify-content:center;gap:10px;margin-top:12px;}
+.cdc{width:52px;height:52px;border-radius:50%;border:1.5px solid #e8d5a3;display:flex;align-items:center;justify-content:center;flex-direction:column;}
+.cdn{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:600;}.cdu{font-size:8px;color:#8a7a6a;text-transform:uppercase;}
+.mapb{display:block;margin:0 16px;padding:13px;background:${green};color:#fff;border-radius:10px;text-align:center;font-size:14px;text-decoration:none;}
+</style></head><body>
+<div style="text-align:center;padding:0 24px 20px;">
+  <div style="font-size:11px;letter-spacing:4px;color:#c8a96e;text-transform:uppercase;margin-bottom:12px;">${isWedding?"Nikoh to'yiga taklif":"Maxsus taklif"}</div>
+  ${titleBlock}
+</div>
+${inviteBlock}
+<div class="card"><div class="lbl">${isWedding?'Boshlash vaqti':'Marosim vaqti'}</div><div class="vl">${dateStr}</div>${!isWedding?'<div style="font-size:12px;color:#8a7a6a;margin-top:4px;">'+esc(meal)+'</div>':''}</div>
+<div class="card" style="text-align:center;"><div class="lbl">Qoldi</div>
+  <div class="cd-grid" id="cdGrid">
+    <div class="cdc"><div class="cdn" id="cdd">00</div><div class="cdu">kun</div></div>
+    <div class="cdc"><div class="cdn" id="cdh">00</div><div class="cdu">soat</div></div>
+    <div class="cdc"><div class="cdn" id="cdm">00</div><div class="cdu">daq</div></div>
+    <div class="cdc"><div class="cdn" id="cds">00</div><div class="cdu">son</div></div>
+  </div>
+</div>
+<div class="card"><div class="lbl">Manzil</div><div class="vl">${esc(venue)}</div><div style="font-size:12px;color:#8a7a6a;margin-top:4px;">${esc(addr)}</div></div>
+${val('map_url')?`<a class="mapb" href="${esc(val('map_url'))}" target="_blank">🗺 Karta orqali ochish</a>`:''}
+<script>
+const T=new Date("${dateRaw}");
+function tk(){if(!dateRaw||isNaN(T))return;const df=T-new Date();if(df<=0)return;
+document.getElementById('cdd').textContent=String(Math.floor(df/86400000)).padStart(2,'0');
+document.getElementById('cdh').textContent=String(Math.floor(df%86400000/3600000)).padStart(2,'0');
+document.getElementById('cdm').textContent=String(Math.floor(df%3600000/60000)).padStart(2,'0');
+document.getElementById('cds').textContent=String(Math.floor(df%60000/1000)).padStart(2,'0');}
+tk();setInterval(tk,1000);
+<\/script></body></html>`;
+}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+function updatePreview(){
+  const f=document.getElementById('ebFrame');
+  const d=f.contentDocument||f.contentWindow.document;
+  d.open();d.write(buildPreview());d.close();
+}
+
+async function saveEvent(){
+  const msg = document.getElementById('saveMsg');
+  msg.textContent='Saqlanmoqda...'; msg.style.color='var(--muted)';
+
+  const fd = new FormData();
+  fd.append('event_type', eventType);
+  fd.append('title', val('title')||'Taklifnoma');
+  fd.append('couple_names', val('couple_names'));
+  fd.append('invite_text', val('invite_text'));
+  if(val('event_date')) fd.append('event_date', val('event_date'));
+  fd.append('venue_name', val('venue_name'));
+  fd.append('venue_address', val('venue_address'));
+  const mapUrl = val('map_url').trim();
+  if(mapUrl) fd.append('map_url', mapUrl);
+  fd.append('meal_type', val('meal_type')||'Ertalabki osh');
+  fd.append('status', document.getElementById('statusSel').value);
+  const af = document.getElementById('audioFile').files[0];
+  if(af) fd.append('audio_file', af);
+
+  try {
+    const url    = EVENT_ID ? '/api/events/'+EVENT_ID+'/' : '/api/events/';
+    const method = EVENT_ID ? 'PUT' : 'POST';
+    const res = await fetch(url, {method, headers:{'X-CSRFToken':getCookie('csrftoken')}, body:fd});
+    if(res.ok){
+      const data = await res.json();
+      msg.textContent='✓ Saqlandi!'; msg.style.color='#5edb8a';
+      if(data.qr_slug){
+        document.getElementById('qrLink').innerHTML =
+          `<a href="/api/qr/event-download/${data.qr_slug}/" class="btn btn-outline btn-sm">📥 QR</a>
+           <a href="/e/${data.qr_slug}/" target="_blank" class="btn btn-outline btn-sm">👁 Ko'rish</a>`;
+      }
+      if(!EVENT_ID && data.id){ setTimeout(()=>window.location='/dashboard/events/'+data.id+'/edit/', 800); }
+    } else {
+      const err = await res.json().catch(()=>({}));
+      const detail = Object.values(err).flat().join(' ') || res.statusText;
+      msg.textContent='Xatolik: '+detail; msg.style.color='#ff8080';
+      console.error('Save error', res.status, err);
+    }
+  } catch(e) {
+    msg.textContent='Tarmoq xatosi: '+e.message; msg.style.color='#ff8080';
+    console.error('Fetch error', e);
+  }
+  setTimeout(()=>{msg.textContent='';msg.style.color='#5edb8a';},5000);
+}
+
+async function loadExisting(){
+  if(!EVENT_ID) return;
+  const e = await fetch('/api/events/'+EVENT_ID+'/').then(r=>r.json());
+  eventType = e.event_type;
+  document.querySelectorAll('.type-btn').forEach(b=>b.classList.toggle('active',b.dataset.type===e.event_type));
+  document.getElementById('mealGroup').style.display   = e.event_type==='osh' ? '' : 'none';
+  document.getElementById('coupleGroup').style.display = e.event_type==='wedding' ? '' : 'none';
+  document.getElementById('title').value         = e.title||'';
+  document.getElementById('couple_names').value  = e.couple_names||'';
+  document.getElementById('invite_text').value   = e.invite_text||'';
+  if(e.event_date) document.getElementById('event_date').value = e.event_date.slice(0,16);
+  document.getElementById('venue_name').value    = e.venue_name||'';
+  document.getElementById('venue_address').value = e.venue_address||'';
+  document.getElementById('map_url').value       = e.map_url||'';
+  if(e.meal_type) document.getElementById('meal_type').value = e.meal_type;
+  document.getElementById('statusSel').value     = e.status||'draft';
+  if(e.qr_slug){
+    document.getElementById('qrLink').innerHTML =
+      `<a href="/api/qr/event-download/${e.qr_slug}/" class="btn btn-outline btn-sm">📥 QR</a>
+       <a href="/e/${e.qr_slug}/" target="_blank" class="btn btn-outline btn-sm">👁 Ko'rish</a>`;
+  }
+  updatePreview();
+}
+
+function getCookie(n){let v=document.cookie.match('(^|;)\\s*'+n+'\\s*=\\s*([^;]+)');return v?v.pop():'';}
+
+loadExisting();
+updatePreview();
+</script>
+{% endblock %}

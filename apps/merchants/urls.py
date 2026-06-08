@@ -9,4 +9,9 @@ urlpatterns = [
     path('qrcodes/',                            views.qrcodes_page,     name='qrcodes'),
     path('qrcodes/<int:pk>/',                   views.qrcodes_page,     name='qrcode-detail'),
     path('analytics/',                          views.analytics_page,   name='analytics'),
+
+    # Taklifnomalar (to'y, osh)
+    path('events/',                             views.events_list,      name='events-list'),
+    path('events/new/',                         views.event_builder,    name='event-new'),
+    path('events/<int:pk>/edit/',               views.event_builder,    name='event-edit'),
 ]

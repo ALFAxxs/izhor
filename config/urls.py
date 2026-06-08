@@ -15,6 +15,7 @@ urlpatterns = [
     path('api/',          include('apps.templates_app.urls')),
     path('api/qr/',       include('apps.qr_system.urls')),
     path('i/',            include('apps.viewer.urls')),
+    path('e/',            include('apps.viewer.event_urls')),
 ]
 
 if settings.DEBUG:

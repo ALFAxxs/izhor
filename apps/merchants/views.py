@@ -52,3 +52,13 @@ def logout_page(request):
     from django.contrib.auth import logout
     logout(request)
     return redirect('/auth/login/')
+
+
+@login_required(login_url='/auth/login/')
+def events_list(request):
+    return render(request, 'dashboard/events_list.html')
+
+
+@login_required(login_url='/auth/login/')
+def event_builder(request, pk=None):
+    return render(request, 'dashboard/event_builder.html', {'event_id': pk or ''})
