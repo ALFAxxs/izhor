@@ -72,6 +72,10 @@
     <div class="form-group">
       <div class="sl">MUSIQA YUKLASH</div>
       <input type="file" accept="audio/*" id="audioFile" style="font-size:12px;">
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;color:var(--muted);cursor:pointer;">
+        <input type="checkbox" id="audio_autoplay" checked style="width:auto;">
+        Ochilganda avtomatik yangrasin
+      </label>
     </div>
   </div>
 
@@ -142,7 +146,7 @@ function buildPreview(){
 .mapb{display:block;margin:0 16px;padding:13px;background:${green};color:#fff;border-radius:10px;text-align:center;font-size:14px;text-decoration:none;}
 </style></head><body>
 <div style="text-align:center;padding:0 24px 20px;">
-  <div style="font-size:11px;letter-spacing:4px;color:#c8a96e;text-transform:uppercase;margin-bottom:12px;">${isWedding?"Nikoh to'yiga taklif":"Maxsus taklif"}</div>
+  ${isWedding?`<div style="font-size:11px;letter-spacing:4px;color:#c8a96e;text-transform:uppercase;margin-bottom:12px;">Nikoh to'yiga taklif</div>`:''}
   ${titleBlock}
 </div>
 ${inviteBlock}
@@ -190,6 +194,7 @@ async function saveEvent(){
   const mapUrl = val('map_url').trim();
   if(mapUrl) fd.append('map_url', mapUrl);
   fd.append('meal_type', val('meal_type')||'Ertalabki osh');
+  fd.append('audio_autoplay', document.getElementById('audio_autoplay').checked);
   fd.append('status', document.getElementById('statusSel').value);
   const af = document.getElementById('audioFile').files[0];
   if(af) fd.append('audio_file', af);
@@ -235,6 +240,7 @@ async function loadExisting(){
   document.getElementById('venue_address').value = e.venue_address||'';
   document.getElementById('map_url').value       = e.map_url||'';
   if(e.meal_type) document.getElementById('meal_type').value = e.meal_type;
+  document.getElementById('audio_autoplay').checked = e.audio_autoplay !== false;
   document.getElementById('statusSel').value     = e.status||'draft';
   if(e.qr_slug){
     document.getElementById('qrLink').innerHTML =

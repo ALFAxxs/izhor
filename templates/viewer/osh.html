@@ -52,7 +52,6 @@ canvas#petals{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:
 <canvas id="petals"></canvas>
 <div class="wrap">
   <div class="hero-text">
-    <div class="event-label">Siz uchun maxsus taklif</div>
     <div class="event-title">Hurmatli<br>Mehmonlar!</div>
     <div class="divider-ornament"><span></span>
       <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1L8.5 5.5H13L9.5 8L11 12.5L7 10L3 12.5L4.5 8L1 5.5H5.5L7 1Z" fill="#c8a96e"/></svg>
@@ -97,7 +96,7 @@ canvas#petals{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:
     <div class="mp-waves"><div class="mp-bar paused"></div><div class="mp-bar paused"></div><div class="mp-bar paused"></div><div class="mp-bar paused"></div><div class="mp-bar paused"></div></div>
     <div class="mp-info"><div class="mp-title">Musiqa</div><div class="mp-hint">Marosim kuyini eshiting</div></div>
   </div>
-  <audio id="bgMusic" src="{{ event.audio_file.url }}" loop></audio>
+  <audio id="bgMusic" src="{{ event.audio_file.url }}" loop {% if event.audio_autoplay %}data-autoplay="1"{% endif %}></audio>
   {% endif %}
 
   <div class="merchant-tag">{{ merchant.shop_name }}</div>
@@ -117,12 +116,26 @@ function tick(){
 }
 tick();setInterval(tick,1000);
 let playing=false;
-function toggleMusic(){
-  const a=document.getElementById('bgMusic'),btn=document.getElementById('mpBtn'),bars=document.querySelectorAll('.mp-bar');
-  if(!a)return;
-  if(playing){a.pause();playing=false;btn.textContent='▶';bars.forEach(b=>b.classList.add('paused'));}
-  else{a.play().then(()=>{playing=true;btn.textContent='⏸';bars.forEach(b=>b.classList.remove('paused'));}).catch(e=>console.log(e));}
+function setUI(on){
+  const btn=document.getElementById('mpBtn'),bars=document.querySelectorAll('.mp-bar');
+  if(btn)btn.textContent=on?'⏸':'▶';
+  bars.forEach(b=>b.classList.toggle('paused',!on));
 }
+function toggleMusic(){
+  const a=document.getElementById('bgMusic');
+  if(!a)return;
+  if(playing){a.pause();playing=false;setUI(false);}
+  else{a.play().then(()=>{playing=true;setUI(true);}).catch(e=>console.log(e));}
+}
+// Avtomatik yangratish — brauzer bloklasa, birinchi teginishda boshlanadi
+(function(){
+  const a=document.getElementById('bgMusic');
+  if(!a||a.dataset.autoplay!=='1')return;
+  a.play().then(()=>{playing=true;setUI(true);}).catch(()=>{
+    const start=()=>{ if(playing)return; a.play().then(()=>{playing=true;setUI(true);}).catch(()=>{}); };
+    ['pointerdown','touchstart','keydown'].forEach(ev=>document.addEventListener(ev,start,{once:true}));
+  });
+})();
 const cv=document.getElementById('petals'),cx=cv.getContext('2d');
 function rs(){cv.width=window.innerWidth;cv.height=window.innerHeight;}rs();window.addEventListener('resize',rs);
 const ptls=Array.from({length:14},()=>mkP());

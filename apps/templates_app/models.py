@@ -105,6 +105,7 @@ class EventTemplate(models.Model):
     venue_address   = models.CharField(max_length=300, blank=True)
     map_url         = models.URLField(blank=True)
     audio_file      = models.FileField(upload_to='audio/', blank=True, null=True)
+    audio_autoplay  = models.BooleanField(default=True)  # ochilganda avtomatik yangrasinmi
 
     meal_type       = models.CharField(max_length=50, blank=True, default='Ertalabki osh')
 

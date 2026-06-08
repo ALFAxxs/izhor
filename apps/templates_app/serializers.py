@@ -91,7 +91,7 @@ class EventTemplateSerializer(serializers.ModelSerializer):
             'id', 'event_type', 'title', 'status',
             'couple_names', 'invite_text',
             'event_date', 'venue_name', 'venue_address', 'map_url',
-            'meal_type', 'audio_file', 'audio_url',
+            'meal_type', 'audio_file', 'audio_url', 'audio_autoplay',
             'view_count', 'qr_slug', 'qr_image_url', 'public_url',
             'created_at', 'updated_at',
         )
